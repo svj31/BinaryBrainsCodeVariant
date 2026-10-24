@@ -3,15 +3,21 @@
 import { useRef } from "react";
 import { motion, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion";
 
-const ease = [0.16, 1, 0.3, 1] as const;
 export type Dir = "up" | "down" | "left" | "right" | "depth";
 
-const OFFSET: Record<Dir, { x?: number; y?: number; z?: number; rotateX?: number; rotateY?: number }> = {
-  up: { y: 70, rotateX: 28 },
-  down: { y: -70, rotateX: -28 },
-  left: { x: 110, rotateY: -24 },
-  right: { x: -110, rotateY: 24 },
-  depth: { z: -260, rotateX: 18 },
+/**
+ * One motion language for the whole site: things rise into place on the same
+ * curve and timing. Direction only nudges the start a little sideways, so the
+ * page reads as one calm, cinematic system instead of many separate tricks.
+ */
+export const EASE = [0.22, 1, 0.36, 1] as const;
+export const DUR = 1;
+export const OFFSET: Record<Dir, { x: number; y: number }> = {
+  up: { x: 0, y: 48 },
+  down: { x: 0, y: -36 },
+  left: { x: 36, y: 24 },
+  right: { x: -36, y: 24 },
+  depth: { x: 0, y: 32 },
 };
 
 /** Thin glowing wisp on the left edge that fills as the page scrolls. */
@@ -21,7 +27,7 @@ export function ScrollWisp() {
   return <motion.div aria-hidden="true" className="sw-scroll-wisp" style={{ scaleY: y }} />;
 }
 
-/** Element flies in from a direction through 3D space, and back out when it leaves. */
+/** Rises into place (with an optional slight sideways start) when it scrolls into view. */
 export function Fly({
   children,
   from = "up",
@@ -39,11 +45,10 @@ export function Fly({
   return (
     <motion.div
       className={className}
-      style={{ transformPerspective: 1100 }}
-      initial={{ opacity: 0, scale: 0.95, x: o.x ?? 0, y: o.y ?? 0, z: o.z ?? 0, rotateX: o.rotateX ?? 0, rotateY: o.rotateY ?? 0 }}
-      whileInView={{ opacity: 1, scale: 1, x: 0, y: 0, z: 0, rotateX: 0, rotateY: 0 }}
-      viewport={{ once, amount: 0.25 }}
-      transition={{ duration: 1.15, delay, ease }}
+      initial={{ opacity: 0, x: o.x, y: o.y, scale: 0.985 }}
+      whileInView={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+      viewport={{ once, amount: 0.2 }}
+      transition={{ duration: DUR, delay, ease: EASE }}
     >
       {children}
     </motion.div>
@@ -64,7 +69,7 @@ export function Drift({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const v = useTransform(scrollYProgress, [0, 1], [amount, -amount]);
+  const v = useTransform(scrollYProgress, [0, 1], [amount * 0.35, -amount * 0.35]);
   return (
     <motion.div ref={ref} className={className} style={axis === "x" ? { x: v } : { y: v }}>
       {children}
@@ -72,27 +77,23 @@ export function Drift({
   );
 }
 
-/**
- * A section that tips back in 3D as it enters, lies flat in the middle of the
- * screen and tips forward as it leaves, like turning the page of a grimoire.
- */
+/** A section that settles in as it enters: a gentle scale and fade tied to scroll, no tilting. */
 export function Tilt3D({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const p = scrollYProgress;
-  const rotateX = useTransform(p, [0, 0.35, 0.65, 1], [22, 0, 0, -14]);
-  const scale = useTransform(p, [0, 0.35, 0.65, 1], [0.88, 1, 1, 0.94]);
-  const opacity = useTransform(p, [0, 0.2, 0.85, 1], [0.2, 1, 1, 0.5]);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "start 45%"] });
+  const scale = useTransform(scrollYProgress, [0, 1], [0.94, 1]);
+  const opacity = useTransform(scrollYProgress, [0, 0.6], [0, 1]);
+  const y = useTransform(scrollYProgress, [0, 1], [60, 0]);
   return (
-    <div ref={ref} style={{ perspective: 1400 }}>
-      <motion.div className={className} style={{ rotateX, scale, opacity, transformOrigin: "50% 100%" }}>
+    <div ref={ref}>
+      <motion.div className={className} style={{ scale, opacity, y }}>
         {children}
       </motion.div>
     </div>
   );
 }
 
-/** Words flip up one by one out of the soil, each with a slight 3D twist. */
+/** Film-title reveal: each word rises from behind a mask, one after another. */
 export function SplitText({
   text,
   as = "h2",
@@ -109,30 +110,17 @@ export function SplitText({
   const M = motion[as];
   const words = text.split(" ");
   return (
-    <M
-      id={id}
-      className={className}
-      aria-label={text}
-      initial="hide"
-      whileInView="show"
-      viewport={{ once: true, amount: 0.5 }}
-      transition={{ staggerChildren: 0.07, delayChildren: delay }}
-      style={{ perspective: 800 }}
-    >
+    <M id={id} className={className} aria-label={text} initial="hide" whileInView="show" viewport={{ once: true, amount: 0.6 }} transition={{ staggerChildren: 0.045, delayChildren: delay }}>
       {words.map((w, i) => (
-        <motion.span
-          key={i}
-          aria-hidden="true"
-          className="sw-word"
-          style={{ transformOrigin: "50% 100%" }}
-          variants={{
-            hide: { opacity: 0, y: "0.9em", rotateX: -80, rotateZ: i % 2 ? 4 : -4 },
-            show: { opacity: 1, y: 0, rotateX: 0, rotateZ: 0, transition: { duration: 0.9, ease } },
-          }}
-        >
-          {w}
-          {i < words.length - 1 ? " " : ""}
-        </motion.span>
+        <span key={i} aria-hidden="true" className="inline-block overflow-hidden pb-[0.12em] align-top -mb-[0.12em]">
+          <motion.span
+            className="sw-word"
+            variants={{ hide: { y: "110%" }, show: { y: 0, transition: { duration: 0.9, ease: EASE } } }}
+          >
+            {w}
+            {i < words.length - 1 ? "\u00a0" : ""}
+          </motion.span>
+        </span>
       ))}
     </M>
   );
