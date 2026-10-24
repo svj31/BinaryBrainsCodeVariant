@@ -5,6 +5,7 @@ export default defineConfig({
   timeout: 45_000,
   use: {
     baseURL: process.env.BASE_URL ?? "http://localhost:3100",
+    viewport: { width: 1280, height: 1500 },
     launchOptions: { args: ["--use-gl=swiftshader", "--enable-webgl", "--ignore-gpu-blocklist"] },
   },
   webServer: process.env.BASE_URL

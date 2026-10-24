@@ -1,4 +1,30 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+
+/** Real pointer drag from a card to an action zone (Canvas Protocol). */
+async function dragTo(page: Page, card: Locator, zone: Locator, retry = true): Promise<void> {
+  try {
+    await dragOnce(page, card, zone);
+  } catch (e) {
+    if (!retry) throw e;
+    await page.waitForTimeout(600); // an exiting card was still animating out
+    await dragOnce(page, card, zone);
+  }
+}
+
+async function dragOnce(page: Page, card: Locator, zone: Locator) {
+  await card.waitFor({ state: "visible" });
+  await page.waitForTimeout(250); // let list re-ordering animations settle
+  await card.scrollIntoViewIfNeeded();
+  const s = (await card.boundingBox())!;
+  await page.mouse.move(s.x + s.width / 2, s.y + s.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(s.x + s.width / 2 + 12, s.y + s.height / 2 + 12, { steps: 3 });
+  const t = (await zone.boundingBox())!;
+  await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2, { steps: 10 });
+  await page.mouse.up();
+}
+const card = (page: Page, kind: string) => page.locator(`[data-card="${kind}"]`).first();
+const zone = (page: Page, id: string) => page.locator(`[data-zone="${id}"]`);
 
 const noConsent = async (page: Page) =>
   page.addInitScript(() => {
@@ -67,7 +93,7 @@ test.describe("SecondWind", () => {
   test("autopsy wizard validates, autosaves, blocks bots and gives a verdict", async ({ page }) => {
     await noConsent(page);
     await page.goto("/bury");
-    await page.getByRole("button", { name: "Continue" }).click();
+    await dragTo(page, card(page, "autopsy"), zone(page, "bury-next"));
     await expect(page.getByText("Project name is required.")).toBeVisible();
 
     await page.getByLabel("Project name").fill("Quiz Forge");
@@ -76,7 +102,7 @@ test.describe("SecondWind", () => {
     await page.getByLabel("Started around").fill("2026-01-10");
     await page.getByLabel("Stopped around").fill("2025-12-01");
     await page.getByLabel("Repository link").fill("not a url");
-    await page.getByRole("button", { name: "Continue" }).click();
+    await dragTo(page, card(page, "autopsy"), zone(page, "bury-next"));
     await expect(page.getByText("It cannot stop before it started.")).toBeVisible();
     await expect(page.getByText("Enter a full link starting with https://")).toBeVisible();
     await page.getByLabel("Stopped around").fill("2026-03-01");
@@ -89,19 +115,19 @@ test.describe("SecondWind", () => {
     await expect(page.getByText("We restored the autopsy you started earlier.")).toBeVisible();
     await expect(page.getByLabel("Project name")).toHaveValue("Quiz Forge");
 
-    await page.getByRole("button", { name: "Continue" }).click();
-    await page.getByRole("button", { name: "Continue" }).click();
+    await dragTo(page, card(page, "autopsy"), zone(page, "bury-next"));
+    await dragTo(page, card(page, "autopsy"), zone(page, "bury-next"));
     await expect(page.getByText("Add at least one thing you finished.", { exact: false })).toBeVisible();
     await page.getByLabel("What did you finish?").fill("Notes parser");
     await page.getByLabel("What did you finish?").press("Enter");
     await page.getByLabel("What is still unfinished?").fill("Spaced repetition");
     await page.getByLabel("What is still unfinished?").press("Enter");
-    await page.getByRole("button", { name: "Continue" }).click();
+    await dragTo(page, card(page, "autopsy"), zone(page, "bury-next"));
 
-    await page.getByRole("button", { name: "Get the verdict" }).click();
+    await dragTo(page, card(page, "autopsy"), zone(page, "bury-next"));
     await expect(page.getByText("Pick at least one reason.")).toBeVisible();
     await page.getByText("Scope creep", { exact: true }).click();
-    await page.getByRole("button", { name: "Get the verdict" }).click();
+    await dragTo(page, card(page, "autopsy"), zone(page, "bury-next"));
 
     await expect(page.getByRole("heading", { name: "Quiz Forge" })).toBeVisible({ timeout: 6000 });
     await expect(page.getByRole("img", { name: /Resurrection Score: \d+ out of 100/ })).toBeVisible();
@@ -117,7 +143,7 @@ test.describe("SecondWind", () => {
     await page.getByLabel("Email").fill("bot@example.com");
     await page.getByLabel("Message").fill("Buy followers now please");
     await page.waitForTimeout(2600);
-    await page.getByRole("button", { name: "Send message" }).click();
+    await dragTo(page, card(page, "form-contact-form"), zone(page, "zone-contact-form"));
     // pretends success, nothing else happens
     await expect(page.getByText("Message received")).toBeVisible();
   });
@@ -125,18 +151,18 @@ test.describe("SecondWind", () => {
   test("contact form validates and sends", async ({ page }) => {
     await noConsent(page);
     await page.goto("/contact");
-    await page.getByRole("button", { name: "Send message" }).click();
+    await dragTo(page, card(page, "form-contact-form"), zone(page, "zone-contact-form"));
     await expect(page.getByText("Name is required.")).toBeVisible();
     await page.getByLabel("Your name").fill("Asha Rao");
     await page.getByLabel("Email").fill("asha@");
     await page.getByLabel("Message").fill("short");
-    await page.getByRole("button", { name: "Send message" }).click();
+    await dragTo(page, card(page, "form-contact-form"), zone(page, "zone-contact-form"));
     await expect(page.getByText("Enter an email like name@example.com.")).toBeVisible();
     await expect(page.getByText("Message needs at least 10 characters.")).toBeVisible();
     await page.getByLabel("Email").fill("asha@example.com");
     await page.getByLabel("Message").fill("Love the garden view, can clubs use it?");
     await page.waitForTimeout(2600);
-    await page.getByRole("button", { name: "Send message" }).click();
+    await dragTo(page, card(page, "form-contact-form"), zone(page, "zone-contact-form"));
     await expect(page.getByText("Message received")).toBeVisible();
   });
 
@@ -149,14 +175,15 @@ test.describe("SecondWind", () => {
     await noConsent(page);
     await page.goto("/garden/pocket-planner");
     await expect(page.getByText("7-day sprint")).toBeVisible();
-    const boxes = page.getByRole("checkbox");
-    for (let i = 0; i < 6; i++) await boxes.nth(i).check();
-    await boxes.nth(6).click(); // last day casts the revive ritual first
+    for (let i = 0; i < 7; i++) {
+      await dragTo(page, page.locator('[data-zone="sprint-todo"] [data-card="day"]').first(), zone(page, "sprint-done"));
+      await expect(page.locator('[data-zone="sprint-done"] [data-card="day"]')).toHaveCount(i + 1, { timeout: 6000 });
+    }
     await expect(page.getByText(/Alive again. Pocket Planner has left/)).toBeVisible();
-    await page.getByRole("radio", { name: /Salvage/ }).click();
+    await dragTo(page, card(page, "project"), zone(page, "path-salvage"));
     await page.getByLabel("Part name").fill("Deadline extractor");
-    await page.getByRole("button", { name: "Save part" }).click();
-    await expect(page.getByRole("button", { name: "Remove Deadline extractor" })).toBeVisible({ timeout: 6000 });
+    await dragTo(page, card(page, "form-organ-form"), zone(page, "zone-organ-form"));
+    await expect(page.locator('[data-card="organ"]', { hasText: "Deadline extractor" })).toBeVisible({ timeout: 6000 });
     await page.goto("/salvage");
     await expect(page.getByRole("heading", { name: "Deadline extractor" })).toBeVisible();
   });
@@ -164,8 +191,8 @@ test.describe("SecondWind", () => {
   test("frankenstein merge creates a combined project", async ({ page }) => {
     await noConsent(page);
     await page.goto("/garden/study-buddy");
-    await page.getByRole("radio", { name: /Merge/ }).click();
-    await page.getByRole("button", { name: "Stitch them together" }).click();
+    await dragTo(page, card(page, "project"), zone(page, "path-merge"));
+    await dragTo(page, card(page, "sibling"), zone(page, "stitch-table"));
     await page.getByRole("link", { name: "Open the combined project" }).click();
     await expect(page.getByRole("heading", { level: 1 })).toContainText("×");
   });
@@ -213,10 +240,7 @@ test.describe("SecondWind", () => {
   test("salvage yard: borrow moves a part into another project", async ({ page }) => {
     await noConsent(page);
     await page.goto("/salvage");
-    const card = page.locator("li", { has: page.getByRole("heading", { name: "Syllabus date parser" }) });
-    await card.getByRole("button", { name: "Borrow" }).click();
-    await page.getByLabel("Send to").selectOption("study-buddy");
-    await page.getByRole("button", { name: "Borrow into project" }).click();
+    await dragTo(page, page.locator('[data-card="part"]', { hasText: "Syllabus date parser" }), zone(page, "borrow-study-buddy"));
     await expect(page.getByText("Part delivered")).toBeVisible({ timeout: 8000 });
     await page.getByRole("link", { name: "Open Study Buddy" }).click();
     await expect(page.getByText('Borrowed "Syllabus date parser" from Pocket Planner')).toBeVisible();
@@ -233,5 +257,30 @@ test.describe("SecondWind", () => {
     await page.goto("/insights");
     await page.getByRole("button", { name: /Scope creep/ }).click();
     await expect(page.getByText("Fix for scope creep:")).toBeVisible();
+  });
+
+  test("keyboard users can drag with Space and drop with Enter", async ({ page }) => {
+    await noConsent(page);
+    await page.goto("/garden/chess-bot", { waitUntil: "networkidle" });
+    await page.waitForTimeout(500);
+    await card(page, "project").focus();
+    await page.keyboard.press("Space");
+    await expect(zone(page, "path-revive")).toBeFocused();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Pivot sketch")).toBeVisible({ timeout: 6000 });
+  });
+
+  test("no primary action buttons remain on core screens", async ({ page }) => {
+    await noConsent(page);
+    for (const [path, banned] of [
+      ["/bury", /^(Continue|Get the verdict|Add)$/],
+      ["/contact", /^Send message$/],
+      ["/salvage", /^Borrow$/],
+      ["/garden/pocket-planner", /^(Save part|Stitch them together|Remove from garden)$/],
+    ] as const) {
+      await page.goto(path);
+      await expect(page.getByRole("button", { name: banned, exact: true })).toHaveCount(0);
+    }
   });
 });
