@@ -13,6 +13,8 @@ import { Field, Honeypot } from "@/components/ui/Field";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { VerdictBadge } from "@/components/ui/VerdictBadge";
 import { GraveLoader } from "@/components/ui/GraveLoader";
+import { useRitual } from "@/components/magic/Ritual";
+import { Burst } from "@/components/magic/Burst";
 
 interface Form {
   name: string;
@@ -56,6 +58,28 @@ const EMPTY: Form = {
   relevance: 3,
   interest: 3,
   epitaph: "",
+};
+
+/** Pre-filled example so visitors can try the full flow in seconds. */
+const SAMPLE: Form = {
+  ...EMPTY,
+  name: "Lecture Lens",
+  pitch: "Turns recorded lectures into searchable notes with timestamps",
+  goal: "Upload a lecture video, get chapters, a summary and a search box that jumps to the right minute",
+  stack: "React, Python, Whisper",
+  tags: "students, education, ai",
+  startedOn: "2025-11-02",
+  buriedOn: "2026-02-20",
+  done: ["Video upload", "Transcription pipeline", "Timestamp search"],
+  left: ["Chapter detection", "Summary view", "Mobile layout"],
+  completion: 50,
+  effortLeft: 3,
+  causes: ["no-time", "scope-creep"],
+  causeNote: "Exams arrived just as I started adding flashcards.",
+  ideaStrength: 4,
+  relevance: 5,
+  interest: 4,
+  epitaph: "Heard every lecture, finished none of them.",
 };
 
 const STEPS = ["What it was", "Done and left", "Why it stopped"] as const;
@@ -152,6 +176,11 @@ export function BuryWizard() {
       setStep(s ?? 0);
       setRestored(true);
       startedAt.current = 0; // restored work was typed earlier, so skip the speed check
+    } else if (new URLSearchParams(window.location.search).get("sample")) {
+      setForm(SAMPLE);
+      setStep(0);
+      setRestored(true);
+      startedAt.current = 0;
     }
   }, [hydrated, draft]);
 
@@ -196,11 +225,13 @@ export function BuryWizard() {
       return;
     }
     const p = toProject(form);
-    add(p);
     setResult(p);
     setPhase("digging");
     track("project_buried");
-    setTimeout(() => setPhase("done"), 1600);
+    useRitual.getState().cast("verdict", p.name, 2600).then(() => {
+      add(p);
+      setPhase("done");
+    });
   };
 
   const reset = () => {
@@ -230,13 +261,15 @@ export function BuryWizard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full rounded-xl border border-line bg-card p-6 text-center sm:p-8"
+              className="w-full overflow-hidden rounded-xl border border-line bg-card p-6 text-center sm:p-8"
               aria-live="polite"
             >
               <p className="eyebrow">Verdict for</p>
               <h1 className="mt-2 font-display text-3xl font-semibold">{result.name}</h1>
-              <div className="mt-6 flex justify-center">
-                <ScoreRing score={a.score} color={v.color} size={140} />
+              <div className="mt-10 mb-4 flex justify-center">
+                <Burst color={v.color}>
+                  <ScoreRing score={a.score} color={v.color} size={140} />
+                </Burst>
               </div>
               <div className="mt-5 flex justify-center">
                 <VerdictBadge verdict={a.verdict} size="lg" />

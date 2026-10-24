@@ -16,6 +16,7 @@ import { StatusTag, VerdictBadge } from "@/components/ui/VerdictBadge";
 import { GraveLoader } from "@/components/ui/GraveLoader";
 import { Reveal } from "@/components/ui/Reveal";
 import { PathBody } from "./PathPanels";
+import { useRitual } from "@/components/magic/Ritual";
 
 const KIND_LABEL: Record<TimelineEvent["kind"], string> = {
   born: "Born",
@@ -159,8 +160,11 @@ export function ProjectDetail({ id }: { id: string }) {
                   role="radio"
                   aria-checked={on}
                   onClick={() => {
-                    choose(p.id, k);
-                    track("path_chosen", { path: k });
+                    if (k === path) return;
+                    useRitual.getState().cast(k, p.name, 1700).then(() => {
+                      choose(p.id, k);
+                      track("path_chosen", { path: k });
+                    });
                   }}
                   className={`relative rounded-md border px-3 py-2.5 text-left transition-colors ${
                     on ? "border-transparent" : "border-line hover:border-ink-3"

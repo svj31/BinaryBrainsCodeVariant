@@ -9,6 +9,9 @@ import { useGraveyard } from "@/lib/store";
 import type { Assessment, Organ, Project } from "@/lib/types";
 import { VERDICTS } from "@/lib/verdicts";
 import { track } from "@/lib/consent";
+import { useRitual } from "@/components/magic/Ritual";
+
+const cast = (...a: Parameters<ReturnType<typeof useRitual.getState>["cast"]>) => useRitual.getState().cast(...a);
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -57,8 +60,13 @@ export function SprintPanel({ project }: { project: Project }) {
                 className="mt-1 h-4 w-4 shrink-0 accent-[var(--moss)]"
                 checked={!!progress[i]}
                 onChange={() => {
-                  toggle(project.id, i);
-                  track("sprint_day", { day: d.day });
+                  const finishing = !progress[i] && done === 6;
+                  const run = () => {
+                    toggle(project.id, i);
+                    track("sprint_day", { day: d.day });
+                  };
+                  if (finishing) cast("revive", project.name).then(run);
+                  else run();
                 }}
               />
               <span className="min-w-0">
@@ -129,9 +137,10 @@ export function PivotPanel({ project }: { project: Project }) {
       </div>
       <form
         className="mt-4"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           if (!note.trim()) return;
+          await cast("pivot", project.name, 1600);
           update(project.id, {
             pitch: note.trim(),
             timeline: [...project.timeline, { date: new Date().toISOString().slice(0, 10), kind: "afterlife", note: `Pivoted: ${note.trim()}` }],
@@ -209,11 +218,12 @@ export function SalvagePanel({ project }: { project: Project }) {
       <form
         noValidate
         className="mt-4 grid gap-2 sm:grid-cols-[1fr_160px_auto]"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           const n = name.trim();
           if (n.length < 3) return setErr("Give the part a name of at least 3 characters.");
           if (project.organs.some((o) => o.name.toLowerCase() === n.toLowerCase())) return setErr("That part is already saved.");
+          await cast("salvage", n, 1500);
           update(project.id, { organs: [...project.organs, { id: `${project.id}-${Date.now()}`, name: n, kind, note: "" }] });
           setName("");
           setErr("");
@@ -338,7 +348,8 @@ export function MergePanel({ project, a }: { project: Project; a: Assessment }) 
       ) : (
         <button
           className="btn btn-primary mt-4"
-          onClick={() => {
+          onClick={async () => {
+            await cast("merge", combined.name, 2300);
             const exists = projects.some((p) => p.id === combined.id);
             if (!exists) add(combined);
             choose(project.id, "merge");
@@ -384,10 +395,11 @@ export function ArchivePanel({ project }: { project: Project }) {
       <form
         noValidate
         className="mt-4 space-y-3"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           if (epitaph.trim().length < 4) return setErr("Write an epitaph of at least 4 characters.");
           setErr("");
+          await cast("archive", project.name, 1900);
           update(project.id, { epitaph: epitaph.trim() });
           setStatus(project.id, "archived", lesson.trim() ? `Archived. Lesson: ${lesson.trim()}` : "Archived with an epitaph");
           track("archived");
