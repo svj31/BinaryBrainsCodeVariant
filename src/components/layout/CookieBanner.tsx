@@ -18,17 +18,16 @@ export function CookieBanner() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 24, opacity: 0 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className="fixed inset-x-3 bottom-3 z-[60] mx-auto max-w-xl rounded-lg border border-line bg-card p-4 shadow-[0_12px_40px_-12px_rgba(30,39,33,0.35)] sm:inset-x-auto sm:right-5 sm:bottom-5"
+          className="fixed inset-x-3 bottom-3 z-[60] mx-auto max-w-sm rounded-xl border border-line bg-card p-3.5 shadow-[0_12px_40px_-12px_rgba(30,39,33,0.35)] sm:inset-x-auto sm:left-5 sm:bottom-5"
         >
           <p className="text-sm leading-relaxed text-ink-2">
-            Your projects are saved in this browser only. We would also like to count page visits with
-            cookie-free, anonymous analytics. Nothing runs until you choose.{" "}
+            Your projects stay in this browser. May we count visits with cookie-free, anonymous analytics?{" "}
             <Link href="/privacy#cookies" className="font-medium text-moss underline underline-offset-2">
-              Read the privacy policy
+              Privacy
             </Link>
             .
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-2.5 flex flex-wrap gap-2">
             <button className="btn btn-primary !py-2 text-sm" onClick={() => setConsent("granted")}>
               Allow analytics
             </button>
