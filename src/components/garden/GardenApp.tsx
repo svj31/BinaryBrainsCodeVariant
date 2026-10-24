@@ -12,6 +12,7 @@ import { track } from "@/lib/consent";
 import { GraveLoader } from "@/components/ui/GraveLoader";
 import { LedgerView, PlotsView, TimelineView } from "./Views";
 import { QuickPanel } from "./QuickPanel";
+import { useRitual } from "@/components/magic/Ritual";
 import { VIEWS, ViewSwitcher, type ViewId } from "./ViewSwitcher";
 
 const GardenScene = dynamic(() => import("@/components/three/GardenScene"), {
@@ -138,11 +139,20 @@ export function GardenApp() {
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={view}
-              initial={{ opacity: 0, y: 14, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+              className="relative overflow-x-clip"
+              initial={{ opacity: 0, clipPath: "circle(0% at 92% 0%)", scale: 0.98 }}
+              animate={{ opacity: 1, clipPath: "circle(160% at 92% 0%)", scale: 1, transitionEnd: { clipPath: "none" } }}
+              exit={{ opacity: 0, scale: 0.97, filter: "blur(6px)", transition: { duration: 0.22 } }}
+              transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
             >
+              <motion.span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 z-20 w-32 -skew-x-12"
+                style={{ background: "linear-gradient(90deg, transparent, rgba(242,179,74,0.35), transparent)" }}
+                initial={{ left: "-20%" }}
+                animate={{ left: "120%" }}
+                transition={{ duration: 0.9, ease: "easeInOut" }}
+              />
               {items.length === 0 ? (
                 <EmptyState query={query} onClear={() => (setQuery(""), setFilter("all"))} />
               ) : view === "garden" ? (
@@ -177,7 +187,7 @@ export function GardenApp() {
         <button
           className="font-medium text-moss hover:underline"
           onClick={() => {
-            if (confirm("Reset the garden to the sample projects? Projects you added will be removed.")) resetDemo();
+            if (confirm("Reset the garden to the sample projects? Projects you added will be removed.")) useRitual.getState().cast("reset", undefined, 1500).then(resetDemo);
           }}
         >
           Reset to sample data

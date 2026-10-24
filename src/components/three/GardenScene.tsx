@@ -414,29 +414,56 @@ function ShootingStar() {
   );
 }
 
+/** Crescent painted on a transparent canvas: the "bite" is erased, so no dark disc is left behind. */
+function crescentTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const g = c.getContext("2d")!;
+  const grad = g.createRadialGradient(110, 120, 20, 128, 128, 100);
+  grad.addColorStop(0, "#fff6d6");
+  grad.addColorStop(1, "#f3d98f");
+  g.fillStyle = grad;
+  g.beginPath();
+  g.arc(128, 128, 96, 0, Math.PI * 2);
+  g.fill();
+  // soft craters
+  g.fillStyle = "rgba(214,184,110,0.35)";
+  [[90, 150, 12], [110, 90, 8], [80, 110, 6]].forEach(([x, y, r]) => {
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+  });
+  g.globalCompositeOperation = "destination-out";
+  g.filter = "blur(2px)";
+  g.beginPath();
+  g.arc(158, 104, 86, 0, Math.PI * 2);
+  g.fill();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 function Moon() {
-  const tex = useMemo(() => glowTexture(), []);
+  const glow = useMemo(() => glowTexture(), []);
+  const face = useMemo(() => crescentTexture(), []);
   const halo = useRef<THREE.Sprite>(null);
+  const body = useRef<THREE.Sprite>(null);
   useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
     if (halo.current) {
-      const s = 9 + Math.sin(clock.elapsedTime * 0.6) * 0.5;
+      const s = 7 + Math.sin(t * 0.6) * 0.5;
       halo.current.scale.set(s, s, 1);
     }
+    if (body.current) body.current.material.rotation = Math.sin(t * 0.2) * 0.05;
   });
   return (
     <group position={[8, 1.9, -21]} scale={0.75}>
-      <sprite ref={halo}>
-        <spriteMaterial map={tex} color="#f7e3a6" transparent opacity={0.45} fog={false} depthWrite={false} blending={THREE.AdditiveBlending} />
+      <sprite ref={halo} position={[-0.5, 0.2, -0.1]}>
+        <spriteMaterial map={glow} color="#f7e3a6" transparent opacity={0.35} fog={false} depthWrite={false} blending={THREE.AdditiveBlending} />
       </sprite>
-      <mesh>
-        <circleGeometry args={[1.5, 48]} />
-        <meshBasicMaterial color="#f9e7b0" fog={false} toneMapped={false} />
-      </mesh>
-      {/* the shadow disc carves the crescent */}
-      <mesh position={[0.6, 0.35, 0.01]}>
-        <circleGeometry args={[1.35, 48]} />
-        <meshBasicMaterial color={THEMES.night.sky} fog={false} />
-      </mesh>
+      <sprite ref={body} scale={[3.4, 3.4, 1]}>
+        <spriteMaterial map={face} transparent fog={false} depthWrite={false} toneMapped={false} />
+      </sprite>
     </group>
   );
 }
