@@ -248,3 +248,131 @@ export function QuickPanel({ item, onClose }: { item: Assessed; onClose?: () => 
     </motion.article>
   );
 }
+
+/**
+ * Horizontal version for under the garden: identity, signals, story and parts
+ * side by side, so nothing hides behind tabs on a wide screen.
+ */
+export function QuickStrip({ item }: { item: Assessed }) {
+  const { project: p, a } = item;
+  const v = VERDICTS[a.verdict];
+  const r = 40;
+  const c = 2 * Math.PI * r;
+  const built = p.done.length / Math.max(1, p.done.length + p.left.length);
+  const col = (i: number) => ({ initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, delay: 0.08 * i, ease } });
+
+  return (
+    <motion.article
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="relative overflow-hidden rounded-2xl border border-line bg-card shadow-[0_24px_60px_-40px_rgba(30,39,33,0.55)]"
+      aria-labelledby={`qs-${p.id}`}
+    >
+      <motion.div
+        className="absolute inset-x-0 top-0 h-1 origin-left"
+        style={{ background: `linear-gradient(90deg, ${v.color}, var(--dawn))` }}
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 0.9, ease }}
+        aria-hidden="true"
+      />
+      <div className="grid divide-line-2 md:grid-cols-2 md:divide-x xl:grid-cols-[1.15fr_1fr_1fr_1fr]">
+        {/* who */}
+        <motion.div {...col(0)} className="p-5">
+          <p className="font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
+            Buried {ago(p.buriedOn)} · {CAUSES[p.causes[0]]?.label.toLowerCase()}
+          </p>
+          <h2 id={`qs-${p.id}`} className="mt-1 font-display text-2xl leading-tight font-semibold">
+            {p.name}
+          </h2>
+          <div className="mt-4 flex items-center gap-4">
+            <div className="relative h-20 w-20 shrink-0" role="img" aria-label={`Resurrection Score ${a.score} out of 100`}>
+              <svg viewBox="0 0 100 100" className="-rotate-90" aria-hidden="true">
+                <circle cx="50" cy="50" r={r} fill="none" stroke="var(--stone-light)" strokeWidth="7" />
+                <motion.circle cx="50" cy="50" r={r} fill="none" stroke={v.color} strokeWidth="7" strokeLinecap="round" strokeDasharray={c} initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - a.score / 100) }} transition={{ duration: 1.1, ease }} />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center font-display text-2xl font-semibold" aria-hidden="true">
+                <CountUp to={a.score} />
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              <span className="inline-flex items-center gap-1.5 rounded-[8px] border-2 px-2 py-0.5 font-mono text-xs font-medium tracking-wider uppercase" style={{ color: v.color, borderColor: v.color, background: v.soft }}>
+                <VerdictIcon v={a.verdict} size={14} />
+                {v.label}
+              </span>
+              <p className="text-sm font-medium">{v.path}</p>
+              <StatusTag status={p.status} />
+            </div>
+          </div>
+          <Link href={`/garden/${p.id}`} className="btn btn-primary mt-4 w-full !py-2 text-sm">
+            {v.action}
+          </Link>
+        </motion.div>
+
+        {/* signals */}
+        <motion.div {...col(1)} className="flex flex-col items-center p-5">
+          <p className="self-start text-xs font-semibold text-ink-2">Six signals</p>
+          <Radar factors={a.factors} color={v.color} size={170} />
+          <p className="text-center text-xs text-ink-2">{a.reasons[0]}</p>
+        </motion.div>
+
+        {/* story */}
+        <motion.div {...col(2)} className="p-5">
+          <p className="text-xs font-semibold text-ink-2">Story</p>
+          <p className="mt-2 font-display text-base text-ink-2 italic">&ldquo;{p.epitaph}&rdquo;</p>
+          <ol className="mt-3 space-y-2 border-l border-line pl-4">
+            {[...p.timeline]
+              .sort((x, y) => x.date.localeCompare(y.date))
+              .slice(-4)
+              .map((t, i) => (
+                <li key={i} className="relative text-xs">
+                  <span className={`absolute top-1 -left-[21px] h-2 w-2 rounded-full ${t.kind === "afterlife" ? "bg-dawn" : t.kind === "buried" ? "bg-ink" : "bg-moss"}`} aria-hidden="true" />
+                  <span className="font-mono text-[10px] text-ink-3">{fmtMonth(t.date)}</span> · {t.note}
+                </li>
+              ))}
+          </ol>
+        </motion.div>
+
+        {/* parts */}
+        <motion.div {...col(3)} className="p-5">
+          <div className="flex justify-between text-xs">
+            <span className="font-semibold text-ink-2">Finished vs left</span>
+            <span className="font-mono">
+              {p.done.length}/{p.done.length + p.left.length}
+            </span>
+          </div>
+          <div className="mt-1.5 flex h-2 overflow-hidden rounded-[3px] bg-stone-light">
+            <motion.div className="h-full bg-moss" initial={{ width: 0 }} animate={{ width: `${built * 100}%` }} transition={{ duration: 0.8, ease }} />
+          </div>
+          <ul className="mt-3 flex flex-wrap gap-1.5">
+            {p.done.map((d) => (
+              <li key={d} className="rounded-[5px] bg-moss-soft px-2 py-0.5 text-xs text-moss">
+                {d}
+              </li>
+            ))}
+            {p.left.map((d) => (
+              <li key={d} className="rounded-[5px] border border-dashed border-line px-2 py-0.5 text-xs text-ink-2">
+                {d}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-ink-2">
+            {p.organs.length} reusable part{p.organs.length === 1 ? "" : "s"} in the{" "}
+            <Link href="/salvage" className="font-medium text-moss underline underline-offset-2">
+              Salvage Yard
+            </Link>
+            {a.mergeWith && (
+              <>
+                {" "}· overlaps with{" "}
+                <Link href={`/garden/${p.id}#merge`} className="font-medium text-moss underline underline-offset-2">
+                  {a.mergeWith.name}
+                </Link>
+              </>
+            )}
+          </p>
+        </motion.div>
+      </div>
+    </motion.article>
+  );
+}
