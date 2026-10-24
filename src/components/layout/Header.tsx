@@ -7,6 +7,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Logo } from "@/components/brand/Logo";
 import { ThemeSwitch } from "./ThemeSwitch";
 import { CommandChip } from "./CommandBox";
+import { SoundToggle } from "./SoundLayer";
+import { TourButton } from "./Tour";
 
 const NAV = [
   { href: "/garden", label: "Garden" },
@@ -41,6 +43,7 @@ export function Header() {
             <Link
               key={n.href}
               href={n.href}
+              data-tour={n.href === "/garden" ? "nav-garden" : undefined}
               aria-current={active(n.href) ? "page" : undefined}
               className="relative rounded-md px-3 py-2 text-sm font-medium text-ink-2 transition-colors hover:text-ink"
             >
@@ -59,7 +62,11 @@ export function Header() {
 
         <div className="flex items-center gap-2">
           <CommandChip />
-          <ThemeSwitch />
+          <TourButton />
+          <span className="flex items-center gap-2" data-tour="prefs">
+            <SoundToggle />
+            <ThemeSwitch />
+          </span>
           <Link href="/bury" className="btn btn-primary hidden !py-2 text-sm sm:inline-flex">
             Bury a project
           </Link>
