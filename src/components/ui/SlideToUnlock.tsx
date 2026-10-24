@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { play } from "@/lib/sound";
 import { animate, motion, useMotionValue, useMotionValueEvent, useTransform } from "framer-motion";
 
 /**
@@ -40,6 +41,7 @@ export function SlideToUnlock({
   };
   const finish = () => {
     setUnlocked(true);
+    play("unlock");
     animate(x, max, { type: "spring", stiffness: 300, damping: 26 });
     setTimeout(onUnlock, 380);
     setTimeout(() => {

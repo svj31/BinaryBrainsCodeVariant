@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo } from "react";
+import { play } from "@/lib/sound";
 
 export type RitualKind = "verdict" | "revive" | "pivot" | "salvage" | "merge" | "archive" | "borrow" | "reset";
 
@@ -31,6 +32,7 @@ export const useRitual = create<RitualState>((set) => ({
   cast: (kind, subject, ms = 2100) =>
     new Promise((resolve) => {
       set({ kind, subject });
+      play("magic");
       setTimeout(() => {
         resolve();
         set({ kind: null });
