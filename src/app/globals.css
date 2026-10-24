@@ -1,0 +1,230 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f5f0e6;
+  --paper-2: #ece5d6;
+  --card: #fffcf5;
+  --ink: #1e2721;
+  --ink-2: #434e47;
+  --ink-3: #5c6660;
+  --line: #d8cfbd;
+  --line-2: #e7e0d1;
+  --moss: #2d5a43;
+  --moss-dark: #1f4232;
+  --moss-soft: #e1ebe2;
+  --dawn: #e9a53a;
+  --dawn-soft: #fbebcb;
+  --stone: #cfc8ba;
+  --stone-light: #e6e0d4;
+  --clay: #a4482a;
+
+  --c-revive: #2d6a4a;
+  --c-revive-soft: #dfede3;
+  --c-pivot: #8a520c;
+  --c-pivot-soft: #f8e7c8;
+  --c-salvage: #22617a;
+  --c-salvage-soft: #dcebf0;
+  --c-merge: #84452a;
+  --c-merge-soft: #f3e1d6;
+  --c-archive: #585a55;
+  --c-archive-soft: #e7e5df;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-moss: var(--moss);
+  --color-moss-dark: var(--moss-dark);
+  --color-moss-soft: var(--moss-soft);
+  --color-dawn: var(--dawn);
+  --color-dawn-soft: var(--dawn-soft);
+  --color-stone: var(--stone);
+  --color-stone-light: var(--stone-light);
+  --color-clay: var(--clay);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-fraunces);
+  --font-mono: var(--font-plex-mono);
+}
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--dawn-soft);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@layer components {
+/* Paper grain, kept very faint so it reads as texture not noise */
+.grain {
+  background-image: radial-gradient(rgba(30, 39, 33, 0.035) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 6px;
+  padding: 0.7rem 1.1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--moss);
+  color: #fff;
+  border: 1px solid var(--moss);
+}
+.btn-primary:hover {
+  background: var(--moss-dark);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.btn-ghost:hover {
+  background: var(--card);
+  border-color: var(--ink-3);
+}
+
+.field {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 6px;
+  padding: 0.65rem 0.8rem;
+  color: var(--ink);
+  font-size: 0.95rem;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.field::placeholder {
+  color: #6a726c;
+}
+.field:focus {
+  outline: none;
+  border-color: var(--moss);
+  box-shadow: 0 0 0 3px var(--moss-soft);
+}
+.field[aria-invalid="true"] {
+  border-color: var(--clay);
+}
+
+.eyebrow {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+}
+
+/* Logo animation: stone settles, sprout draws itself, leaves breathe */
+@keyframes sw-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes sw-leaf {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-7deg); }
+}
+@keyframes sw-gust {
+  0% { stroke-dashoffset: 1; opacity: 0; }
+  30% { opacity: 1; }
+  70% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+.sw-logo .sw-stem,
+.sw-logo .sw-stone {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: sw-draw 1.1s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+.sw-logo .sw-stem {
+  animation-delay: 0.45s;
+}
+.sw-logo .sw-leaf {
+  transform-box: fill-box;
+  opacity: 0;
+  animation: sw-fade 0.4s ease 1.1s forwards, sw-leaf 4.5s ease-in-out 1.5s infinite;
+}
+.sw-logo .sw-leaf-l { transform-origin: 100% 100%; }
+.sw-logo .sw-leaf-r { transform-origin: 0% 100%; animation-delay: 1.2s, 1.9s; }
+.sw-logo .sw-gust {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: sw-gust 3.6s ease-in-out 1.6s infinite;
+}
+.sw-logo.sw-static * {
+  animation: none !important;
+  stroke-dashoffset: 0 !important;
+  opacity: 1 !important;
+}
+.sw-logo.sw-static .sw-gust {
+  opacity: 0.9 !important;
+}
+@keyframes sw-fade {
+  to { opacity: 1; }
+}
+
+/* Loading: a sprout pushing out of the soil, repeated */
+@keyframes sw-sprout {
+  0% { transform: scaleY(0); }
+  45%, 80% { transform: scaleY(1); }
+  100% { transform: scaleY(0); }
+}
+@keyframes sw-open {
+  0%, 35% { transform: scale(0); }
+  55%, 80% { transform: scale(1); }
+  100% { transform: scale(0); }
+}
+@keyframes sw-soil {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-1.5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
