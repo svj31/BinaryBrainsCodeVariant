@@ -43,10 +43,37 @@ function KindArt({ kind, hot }: { kind: Organ["kind"]; hot: boolean }) {
         </div>
       )}
       {kind === "dataset" && (
-        <div className="grid grid-cols-4 gap-1">
-          {Array.from({ length: 16 }, (_, i) => (
-            <motion.span key={i} className="h-4 w-8 rounded-[2px]" style={{ background: i < 4 ? m.ink : "#ffffffcc" }} animate={{ opacity: hot ? [1, 0.4, 1] : 1 }} transition={{ duration: 0.8, delay: (i % 4) * 0.08 + Math.floor(i / 4) * 0.05 }} />
+        // a little spreadsheet: header row, rows of values, and a scan line reading through them
+        <div className="relative w-44 overflow-hidden rounded-md border border-[#9cc7d6] bg-white/80 font-mono text-[8px] leading-none shadow-sm">
+          <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-px px-1.5 py-1 text-white" style={{ background: m.ink }}>
+            <span>name</span>
+            <span>water</span>
+            <span>light</span>
+          </div>
+          {[
+            ["fern", "2/wk", "low"],
+            ["basil", "daily", "high"],
+            ["cactus", "1/mo", "high"],
+            ["ivy", "1/wk", "mid"],
+          ].map((r, i) => (
+            <motion.div
+              key={i}
+              className="grid grid-cols-[1.4fr_1fr_1fr] gap-px border-t border-[#dcebf0] px-1.5 py-[3px] text-[#22617a]"
+              initial={false}
+              animate={{ opacity: hot ? [0.3, 1] : 1, x: hot ? [-6, 0] : 0 }}
+              transition={{ duration: 0.35, delay: hot ? i * 0.09 : 0 }}
+            >
+              {r.map((c) => (
+                <span key={c}>{c}</span>
+              ))}
+            </motion.div>
           ))}
+          <motion.span
+            className="pointer-events-none absolute inset-x-0 h-3 bg-[#7cc3dc]/30"
+            animate={{ top: ["18%", "92%"] }}
+            transition={{ duration: hot ? 0.9 : 2.6, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+          />
+          <span className="absolute right-1 bottom-0.5 text-[7px] text-[#22617a]/60">120 rows</span>
         </div>
       )}
       {kind === "design" && (
@@ -174,7 +201,7 @@ export function SalvageYard() {
           </div>
         </div>
       </aside>
-      <motion.ul layout className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <motion.ul layout className="grid min-w-0 content-start gap-4 self-start sm:grid-cols-2 xl:grid-cols-3">
         <AnimatePresence mode="popLayout">
           {shown.map((o, i) => {
             const n = borrowCount(o.id);
