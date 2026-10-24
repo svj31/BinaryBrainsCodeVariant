@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { create } from "zustand";
 import { toggleTheme } from "./ThemeSwitch";
+import { play } from "@/lib/sound";
+import { startTourHere } from "./Tour";
 
 export const useCommand = create<{ open: boolean; setOpen: (o: boolean) => void }>((set) => ({ open: false, setOpen: (open) => set({ open }) }));
 
@@ -28,6 +30,7 @@ const SPELLS: Spell[] = [
   { id: "verdicts", label: "Learn the five verdicts", hint: "/#verdicts", group: "Travel", run: (r) => r.push("/#verdicts") },
   { id: "contact", label: "Send a raven", hint: "/contact", group: "Travel", run: (r) => r.push("/contact") },
   { id: "theme", label: "Turn day into night", hint: "theme", group: "Magic", run: () => toggleTheme({ x: innerWidth / 2, y: innerHeight / 2 }) },
+  { id: "tour", label: "Show the guided tour", hint: "help", group: "Magic", run: () => startTourHere() },
   { id: "top", label: "Float to the top", hint: "scroll", group: "Magic", run: () => scrollTo({ top: 0, behavior: "smooth" }) },
 ];
 
@@ -53,6 +56,7 @@ export function CommandBox() {
 
   useEffect(() => {
     if (open) {
+      play("open");
       setQ("");
       setIdx(0);
       setTimeout(() => input.current?.focus(), 40);
@@ -132,7 +136,7 @@ export function CommandBox() {
 export function CommandChip() {
   const setOpen = useCommand((s) => s.setOpen);
   return (
-    <button onClick={() => setOpen(true)} className="hidden items-center gap-2 rounded-full border border-line bg-card/70 px-3 py-1.5 text-xs text-ink-2 transition-colors hover:border-dawn lg:inline-flex" aria-label="Open spellbook">
+    <button onClick={() => setOpen(true)} data-tour="spellbook" className="hidden items-center gap-2 rounded-full border border-line bg-card/70 px-3 py-1.5 text-xs text-ink-2 transition-colors hover:border-dawn lg:inline-flex" aria-label="Open spellbook">
       <motion.svg width="12" height="12" viewBox="0 0 22 22" animate={{ rotate: [0, 20, -20, 0] }} transition={{ duration: 3, repeat: Infinity }} aria-hidden="true">
         <path d="M11 2l2.2 6.3L20 9l-5.2 4.1L16.6 20 11 16.2 5.4 20l1.8-6.9L2 9l6.8-.7z" fill="var(--dawn)" />
       </motion.svg>
