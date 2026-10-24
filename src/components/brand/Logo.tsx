@@ -57,7 +57,7 @@ export function LogoMark({ size = 36, animated = true, className = "", title = "
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
     <span className={`font-display text-[1.35rem] font-semibold tracking-tight text-ink ${className}`}>
-      Second<span className="text-moss">Wind</span>
+      Second<span className="sw-word-wind text-moss">Wind</span>
     </span>
   );
 }

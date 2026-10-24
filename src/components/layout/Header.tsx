@@ -29,7 +29,7 @@ export function Header() {
         Skip to content
       </a>
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-        <Link href="/" aria-label="SecondWind home" className="shrink-0">
+        <Link href="/" aria-label="SecondWind home" className="sw-hover shrink-0">
           <Logo />
         </Link>
 
