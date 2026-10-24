@@ -3,8 +3,7 @@ import Link from "next/link";
 import { Hero } from "@/components/landing/Hero";
 import { ScoreDemo } from "@/components/landing/ScoreDemo";
 import { Reveal } from "@/components/ui/Reveal";
-import { VerdictBadge } from "@/components/ui/VerdictBadge";
-import { VERDICTS, VERDICT_ORDER } from "@/lib/verdicts";
+import { Journey, Marquee, TiltCard, VerdictExplorer } from "@/components/landing/Interactive";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -25,23 +24,6 @@ const PROBLEMS = [
   },
 ];
 
-const STEPS = [
-  {
-    n: "01",
-    title: "Autopsy",
-    body: "Three short steps: what it was, what you finished and what is left, and why you stopped. Tag the cause of death.",
-  },
-  {
-    n: "02",
-    title: "Verdict",
-    body: "The Resurrection Score weighs six signals. Every point is visible, so you can see what drove the recommendation and disagree with it.",
-  },
-  {
-    n: "03",
-    title: "Second wind",
-    body: "Get a 7-day sprint with three milestones, a pivot sketch, or a list of parts to keep. Then come back and mark it alive.",
-  },
-];
 
 const FEATURES = [
   {
@@ -70,6 +52,7 @@ export default function Home() {
   return (
     <>
       <Hero />
+      <Marquee />
 
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6" aria-labelledby="problem-h">
         <Reveal>
@@ -81,6 +64,9 @@ export default function Home() {
         <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-line bg-line md:grid-cols-3">
           {PROBLEMS.map((p, i) => (
             <Reveal key={p.title} delay={i * 0.08} className="bg-card p-6">
+              <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-[10px] bg-dawn-soft font-mono text-sm font-medium text-[#7a4a0b]">
+                0{i + 1}
+              </span>
               <h3 className="font-display text-xl font-semibold">{p.title}</h3>
               <p className="mt-3 text-[0.95rem] leading-relaxed text-ink-2">{p.body}</p>
             </Reveal>
@@ -96,15 +82,9 @@ export default function Home() {
               From a dusty folder to a clear next step in about two minutes.
             </h2>
           </Reveal>
-          <ol className="mt-10 grid gap-6 md:grid-cols-3">
-            {STEPS.map((s, i) => (
-              <Reveal as="li" key={s.n} delay={i * 0.08} className="relative border-t-2 border-ink pt-5">
-                <span className="font-mono text-sm text-ink-3">{s.n}</span>
-                <h3 className="mt-1 font-display text-2xl font-semibold">{s.title}</h3>
-                <p className="mt-3 leading-relaxed text-ink-2">{s.body}</p>
-              </Reveal>
-            ))}
-          </ol>
+          <div className="mt-12">
+            <Journey />
+          </div>
 
           <Reveal className="mt-16">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -125,17 +105,8 @@ export default function Home() {
             Not every project should come back. Each one gets an honest path.
           </h2>
         </Reveal>
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {VERDICT_ORDER.map((k, i) => {
-            const v = VERDICTS[k];
-            return (
-              <Reveal key={k} delay={i * 0.06} className="flex flex-col rounded-lg border border-line bg-card p-5">
-                <VerdictBadge verdict={k} />
-                <h3 className="mt-4 font-display text-lg font-semibold">{v.path}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-2">{v.blurb}</p>
-              </Reveal>
-            );
-          })}
+        <div className="mt-10">
+          <VerdictExplorer />
         </div>
       </section>
 
@@ -150,6 +121,7 @@ export default function Home() {
           <div className="mt-10 grid gap-4 md:grid-cols-2">
             {FEATURES.map((f, i) => (
               <Reveal key={f.title} delay={i * 0.06}>
+                <TiltCard className="h-full">
                 <Link
                   href={f.href}
                   className="group flex h-full flex-col justify-between rounded-lg border border-line bg-card p-6 transition-colors hover:border-ink-3"
@@ -165,6 +137,7 @@ export default function Home() {
                     </span>
                   </span>
                 </Link>
+                </TiltCard>
               </Reveal>
             ))}
           </div>
