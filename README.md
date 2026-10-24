@@ -79,6 +79,10 @@ SecondWind turns a pile of abandoned repos into a guided, visual decision.
 
 ---
 
+### How it works
+
+<p align="center"><img src="docs/how-it-works.jpg" alt="How SecondWind works: your idea, drag and drop, autopsy, score and verdict lead to revive, pivot, salvage, merge or archive" width="100%" /></p>
+
 ## 🎬 Demo
 
 <div align="center">
@@ -119,6 +123,12 @@ SecondWind turns a pile of abandoned repos into a guided, visual decision.
 ---
 
 ## 🏗️ System Architecture
+
+<p align="center"><img src="docs/technical-architecture.jpg" alt="SecondWind technical architecture: clients, Next.js frontend, Canvas Protocol interaction layer, Zustand state and score engine, platform and security" width="100%" /></p>
+
+
+<details>
+<summary><b>View diagram</b></summary>
 
 ```mermaid
 flowchart TB
@@ -164,7 +174,12 @@ flowchart TB
     class RSC,API server
 ```
 
+</details>
+
 ### Layered design
+
+<details>
+<summary><b>View diagram</b></summary>
 
 ```mermaid
 flowchart LR
@@ -174,11 +189,16 @@ flowchart LR
     D --> E[("💾 Persistence<br/><sub>store · seed</sub>")]
 ```
 
+</details>
+
 > **Design principle:** the domain layer (`src/lib`) is pure TypeScript with no React, so the scoring rules are easy to test and to argue with.
 
 ---
 
 ## 🧭 User Journey
+
+<details>
+<summary><b>View diagram</b></summary>
 
 ```mermaid
 journey
@@ -199,7 +219,12 @@ journey
       Get a nudge reminder: 4: Builder
 ```
 
+</details>
+
 ### Project lifecycle
+
+<details>
+<summary><b>View diagram</b></summary>
 
 ```mermaid
 stateDiagram-v2
@@ -214,11 +239,16 @@ stateDiagram-v2
     Archived --> [*]: ♻️ Compost
 ```
 
+</details>
+
 ---
 
 ## 🧮 The Resurrection Score
 
 `src/lib/score.ts` is **fully rule-based**, so you can trace every verdict back to its inputs. No black box.
+
+<details>
+<summary><b>View diagram</b></summary>
 
 ```mermaid
 flowchart LR
@@ -236,7 +266,12 @@ flowchart LR
     R --> V5["🕯️ Archive"]
 ```
 
+</details>
+
 ### Verdict decision tree
+
+<details>
+<summary><b>View diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -265,6 +300,8 @@ flowchart TD
     style AR fill:#434e47,color:#fff
 ```
 
+</details>
+
 | Signal | Weight | Source |
 |---|:---:|---|
 | 💡 Idea strength | `0.20` | Autopsy slider (1–5) |
@@ -280,6 +317,9 @@ After the verdict, the engine generates a shrunk **7-day plan** from the "still 
 
 ## 🗺️ Routes
 
+<details>
+<summary><b>View diagram</b></summary>
+
 ```mermaid
 flowchart LR
     HOME["🏠 /"] --> GARDEN["🌌 /garden"]
@@ -291,6 +331,8 @@ flowchart LR
     HOME --> CONTACT["✉️ /contact"]
     CONTACT -->|POST| API["⚙️ /api/contact"]
 ```
+
+</details>
 
 | Route | Purpose |
 |---|---|
@@ -309,6 +351,9 @@ flowchart LR
 ## 🔄 Data Flow
 
 ### Burying a project
+
+<details>
+<summary><b>View diagram</b></summary>
 
 ```mermaid
 sequenceDiagram
@@ -332,7 +377,12 @@ sequenceDiagram
     G-->>U: ✨ Burial ritual → verdict page
 ```
 
+</details>
+
 ### Borrowing a salvaged part
+
+<details>
+<summary><b>View diagram</b></summary>
 
 ```mermaid
 sequenceDiagram
@@ -351,11 +401,16 @@ sequenceDiagram
     S-->>U: 🎉 "Part delivered" toast
 ```
 
+</details>
+
 ---
 
 ## 🖐️ The Canvas Protocol (Surprise Challenge)
 
 > **Rule:** primary actions use **no standard buttons**. Every one is done by **dragging a data card into an Action Zone**.
+
+<details>
+<summary><b>View diagram</b></summary>
 
 ```mermaid
 flowchart LR
@@ -374,6 +429,8 @@ flowchart LR
     DROP --> A11Y["📢 aria-live announcement"]
     RET --> A11Y
 ```
+
+</details>
 
 | Feature | 📦 Card | 🎯 Action Zones |
 |---|---|---|
@@ -397,6 +454,9 @@ flowchart LR
 ---
 
 ## 🌌 Feature Map
+
+<details>
+<summary><b>View diagram</b></summary>
 
 ```mermaid
 mindmap
@@ -436,6 +496,8 @@ mindmap
       Sound design
 ```
 
+</details>
+
 | Feature | Where |
 |---|---|
 | Guided Autopsy, cause-of-death tags, autosave, sample prefill | `/bury` |
@@ -460,6 +522,9 @@ mindmap
 
 </div>
 
+<details>
+<summary><b>View diagram</b></summary>
+
 ```mermaid
 flowchart LR
     V["👤 Visitor"] --> Q{"Device &<br/>preferences"}
@@ -470,6 +535,8 @@ flowchart LR
     HI & LO --> OFF["⏸️ Rendering pauses<br/>when off screen"]
 ```
 
+</details>
+
 - 🚀 The cinematic intro plays **once per visit** and any tap or key skips it. Repeat loads fade in within 0.4 s.
 - 📦 3D code is **lazy-loaded** (`next/dynamic`, `ssr: false`) and only fetched for the garden view.
 - 🧘 `prefers-reduced-motion` is respected throughout.
@@ -479,6 +546,9 @@ flowchart LR
 ---
 
 ## 🔐 Security & Privacy
+
+<details>
+<summary><b>View diagram</b></summary>
 
 ```mermaid
 flowchart LR
@@ -494,6 +564,8 @@ flowchart LR
     C3 -- over --> X
     C3 -- ok --> C4["✅ Validate"] --> WH["🔗 Webhook<br/>(server-only)"]
 ```
+
+</details>
 
 - 🔒 Strict security headers on every response.
 - 🗝️ **No secrets in the frontend.** The contact webhook URL stays on the server.
@@ -579,6 +651,9 @@ NEXT_DIST_DIR=.next-test npx next start -p 3100 &
 BASE_URL=http://localhost:3100 npx playwright test
 ```
 
+<details>
+<summary><b>View diagram</b></summary>
+
 ```mermaid
 flowchart LR
     B["🏗️ Isolated build<br/>.next-test"] --> S["🖧 next start :3100"]
@@ -589,6 +664,8 @@ flowchart LR
     P --> D4["📟 ipad"]
     D1 & D2 & D3 & D4 --> R["✅ 39 passing"]
 ```
+
+</details>
 
 | Playwright project | Covers |
 |---|---|
@@ -602,6 +679,9 @@ flowchart LR
 
 ## ☁️ Deployment
 
+<details>
+<summary><b>View diagram</b></summary>
+
 ```mermaid
 flowchart LR
     DEV["💻 git push"] --> GH["🐙 GitHub"]
@@ -609,6 +689,8 @@ flowchart LR
     VC --> PREV["🔍 Preview URL"]
     VC -->|"main"| PROD["🌐 project-graveyard-gold.vercel.app"]
 ```
+
+</details>
 
 - [x] Deployed to Vercel → **[project-graveyard-gold.vercel.app](https://project-graveyard-gold.vercel.app/)**
 - [ ] Set `NEXT_PUBLIC_SITE_URL` to the production domain
