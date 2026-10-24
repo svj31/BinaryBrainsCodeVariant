@@ -10,6 +10,7 @@ import type { Assessment, Organ, Project } from "@/lib/types";
 import { VERDICTS } from "@/lib/verdicts";
 import { track } from "@/lib/consent";
 import { useRitual } from "@/components/magic/Ritual";
+import { ActionZone, DragCard, SubmitByDrop, ZoneIcon, noEnterSubmit } from "@/components/canvas/dnd";
 
 const cast = (...a: Parameters<ReturnType<typeof useRitual.getState>["cast"]>) => useRitual.getState().cast(...a);
 
@@ -20,13 +21,19 @@ export function SprintPanel({ project }: { project: Project }) {
   const plan = sprintPlan(project);
   const progress = project.sprintProgress ?? Array(7).fill(false);
   const done = progress.filter(Boolean).length;
+  const setDay = async (i: number, value: boolean) => {
+    if (!!progress[i] === value) return;
+    if (value && done === 6) await cast("revive", project.name);
+    toggle(project.id, i);
+    track("sprint_day", { day: i + 1 });
+  };
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="font-display text-xl font-semibold">7-day sprint</h3>
-          <p className="text-sm text-ink-2">Shrunk to the core loop. Three milestones. Tick a day when it is done.</p>
+          <p className="text-sm text-ink-2">Shrunk to the core loop. Three milestones. Drag each day into Done when it is finished.</p>
         </div>
         <p className="font-mono text-sm text-ink-2" aria-live="polite">
           {done}/7 days
@@ -47,48 +54,49 @@ export function SprintPanel({ project }: { project: Project }) {
           </motion.p>
         )}
       </AnimatePresence>
-      <ol className="mt-5 grid gap-3 md:grid-cols-2">
-        {plan.map((d, i) => (
-          <li key={d.day}>
-            <label
-              className={`flex h-full cursor-pointer gap-3 rounded-lg border p-4 transition-colors ${
-                progress[i] ? "border-moss bg-moss-soft/60" : "border-line bg-card hover:border-ink-3"
-              }`}
-            >
-              <input
-                type="checkbox"
-                className="mt-1 h-4 w-4 shrink-0 accent-[var(--moss)]"
-                checked={!!progress[i]}
-                onChange={() => {
-                  const finishing = !progress[i] && done === 6;
-                  const run = () => {
-                    toggle(project.id, i);
-                    track("sprint_day", { day: d.day });
-                  };
-                  if (finishing) cast("revive", project.name).then(run);
-                  else run();
-                }}
-              />
-              <span className="min-w-0">
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-xs text-ink-3">Day {d.day}</span>
-                  <span className="font-semibold">{d.title}</span>
-                  {d.milestone && (
-                    <span className="rounded-[4px] bg-dawn-soft px-1.5 py-0.5 text-[11px] font-medium text-[#7a4a0b]">
-                      Milestone: {d.milestone}
-                    </span>
-                  )}
-                </span>
-                <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-sm text-ink-2">
-                  {d.tasks.map((t) => (
-                    <li key={t}>{t}</li>
-                  ))}
-                </ul>
-              </span>
-            </label>
-          </li>
+      <div className="mt-5 grid gap-3 md:grid-cols-2">
+        {([false, true] as const).map((lane) => (
+          <ActionZone
+            key={String(lane)}
+            id={`sprint-${lane ? "done" : "todo"}`}
+            label={lane ? "Done (grown)" : "To do"}
+            hint={lane ? "Drop a finished day here" : "Drop a day back here to reopen it"}
+            accepts={["day"]}
+            tone={lane ? "var(--moss)" : "var(--ink-3)"}
+            icon={lane ? ZoneIcon.check : ZoneIcon.undo}
+            className="!flex-col !items-stretch"
+            onDrop={(c) => setDay(c.payload as number, lane)}
+          >
+            <ol className="relative grid gap-2">
+              <AnimatePresence initial={false}>
+                {plan.map((d, i) =>
+                  !!progress[i] === lane ? (
+                    <motion.li key={d.day} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+                      <DragCard data={{ kind: "day", id: `day-${d.day}`, label: `Day ${d.day}: ${d.title}`, payload: i }} hint={lane ? "Drag back to To do to reopen" : "Drag into Done when finished"}>
+                        <div className={`rounded-lg border p-3 ${lane ? "border-moss bg-moss-soft/60" : "border-line bg-card"}`}>
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-xs text-ink-3">Day {d.day}</span>
+                            <span className="font-semibold">{d.title}</span>
+                            {lane && <Tick />}
+                            {d.milestone && (
+                              <span className="rounded-[4px] bg-dawn-soft px-1.5 py-0.5 text-[11px] font-medium text-[#7a4a0b]">Milestone: {d.milestone}</span>
+                            )}
+                          </span>
+                          <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-sm text-ink-2">
+                            {d.tasks.map((t) => (
+                              <li key={t}>{t}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </DragCard>
+                    </motion.li>
+                  ) : null,
+                )}
+              </AnimatePresence>
+            </ol>
+          </ActionZone>
         ))}
-      </ol>
+      </div>
     </div>
   );
 }
@@ -136,7 +144,9 @@ export function PivotPanel({ project }: { project: Project }) {
         </div>
       </div>
       <form
+        id="pivot-form"
         className="mt-4"
+        onKeyDown={noEnterSubmit}
         onSubmit={async (e) => {
           e.preventDefault();
           if (!note.trim()) return;
@@ -160,10 +170,18 @@ export function PivotPanel({ project }: { project: Project }) {
             onChange={(e) => setNote(e.target.value)}
             placeholder={`e.g. ${project.name} for club organisers instead of students`}
           />
-          <button className="btn btn-primary" disabled={!note.trim()}>
-            Save pivot
-          </button>
+
         </div>
+        <SubmitByDrop
+          formId="pivot-form"
+          cardLabel="Pivot card"
+          cardText={note.trim() ? `Pivot: ${note.trim()}` : "Write the new pitch first"}
+          disabled={!note.trim()}
+          zoneLabel="Replant"
+          zoneHint="Saves the new pitch"
+          icon={ZoneIcon.plant}
+          tone="var(--c-pivot)"
+        />
       </form>
     </div>
   );
@@ -194,22 +212,16 @@ export function SalvagePanel({ project }: { project: Project }) {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96 }}
-              className="flex items-start justify-between gap-3 rounded-lg border border-line bg-card p-3"
             >
-              <div>
-                <p className="font-medium">{o.name}</p>
-                <p className="text-xs text-ink-3">
-                  {o.kind}
-                  {o.note ? ` · ${o.note}` : ""}
-                </p>
-              </div>
-              <button
-                className="text-xs text-ink-3 hover:text-clay"
-                aria-label={`Remove ${o.name}`}
-                onClick={() => update(project.id, { organs: project.organs.filter((x) => x.id !== o.id) })}
-              >
-                Remove
-              </button>
+              <DragCard data={{ kind: "organ", id: o.id, label: o.name, payload: o.id }} hint="Drag into Compost to remove">
+                <div className="rounded-lg border border-line bg-card p-3">
+                  <p className="font-medium">{o.name}</p>
+                  <p className="text-xs text-ink-3">
+                    {o.kind}
+                    {o.note ? ` · ${o.note}` : ""}
+                  </p>
+                </div>
+              </DragCard>
             </motion.li>
           ))}
         </AnimatePresence>
@@ -217,7 +229,9 @@ export function SalvagePanel({ project }: { project: Project }) {
       </ul>
       <form
         noValidate
-        className="mt-4 grid gap-2 sm:grid-cols-[1fr_160px_auto]"
+        id="organ-form"
+        className="mt-4 grid gap-2 sm:grid-cols-[1fr_160px]"
+        onKeyDown={noEnterSubmit}
         onSubmit={async (e) => {
           e.preventDefault();
           const n = name.trim();
@@ -257,7 +271,31 @@ export function SalvagePanel({ project }: { project: Project }) {
             ))}
           </select>
         </div>
-        <button className="btn btn-primary">Save part</button>
+        <div className="sm:col-span-2">
+          <SubmitByDrop
+            formId="organ-form"
+            cardLabel="Part card"
+            cardText={name.trim() ? `${kind}: ${name.trim()}` : "Name the part first"}
+            zoneLabel="Salvage crate"
+            zoneHint="Saves the part to the Salvage Yard"
+            icon={ZoneIcon.crate}
+            tone="var(--c-salvage)"
+          />
+          {project.organs.length > 0 && (
+            <div className="mt-2">
+              <ActionZone
+                id="organ-compost"
+                label="Compost a part"
+                hint="Drag a saved part here to remove it"
+                accepts={["organ"]}
+                icon={ZoneIcon.compost}
+                tone="var(--clay)"
+                compact
+                onDrop={(c) => update(project.id, { organs: project.organs.filter((x) => x.id !== c.payload) })}
+              />
+            </div>
+          )}
+        </div>
         {err && (
           <p id="organ-err" role="alert" className="text-sm text-clay sm:col-span-3">
             {err}
@@ -346,9 +384,24 @@ export function MergePanel({ project, a }: { project: Project; a: Assessment }) 
           </Link>
         </p>
       ) : (
-        <button
-          className="btn btn-primary mt-4"
-          onClick={async () => {
+        <div className="mt-4 grid items-stretch gap-2 sm:grid-cols-2">
+          <DragCard data={{ kind: "sibling", id: other.id, label: other.name }} hint="Drag onto the stitching table">
+            <div className="flex h-full items-center gap-3 rounded-xl border border-line bg-card p-3">
+              <span className="text-ink-3" aria-hidden="true">⠿</span>
+              <span>
+                <span className="block font-semibold">{other.name}</span>
+                <span className="text-xs text-ink-3">sibling project card</span>
+              </span>
+            </div>
+          </DragCard>
+          <ActionZone
+            id="stitch-table"
+            label="Stitching table"
+            hint={`Combines it with ${project.name}`}
+            accepts={["sibling"]}
+            icon={ZoneIcon.stitch}
+            tone="var(--c-merge)"
+            onDrop={async () => {
             await cast("merge", combined.name, 2300);
             const exists = projects.some((p) => p.id === combined.id);
             if (!exists) add(combined);
@@ -357,9 +410,8 @@ export function MergePanel({ project, a }: { project: Project; a: Assessment }) 
             setCreated(combined.id);
             track("merge_created");
           }}
-        >
-          Stitch them together
-        </button>
+          />
+        </div>
       )}
     </div>
   );
@@ -393,8 +445,10 @@ export function ArchivePanel({ project }: { project: Project }) {
       <h3 className="font-display text-xl font-semibold">Lay it to rest</h3>
       <p className="text-sm text-ink-2">An epitaph and one lesson. Then the folder can close without guilt.</p>
       <form
+        id="archive-form"
         noValidate
         className="mt-4 space-y-3"
+        onKeyDown={noEnterSubmit}
         onSubmit={async (e) => {
           e.preventDefault();
           if (epitaph.trim().length < 4) return setErr("Write an epitaph of at least 4 characters.");
@@ -440,9 +494,16 @@ export function ArchivePanel({ project }: { project: Project }) {
             placeholder="e.g. Ship the core before adding social features"
           />
         </div>
-        <button className="btn btn-primary" disabled={archived}>
-          {archived ? "Archived" : "Archive with this epitaph"}
-        </button>
+        <SubmitByDrop
+          formId="archive-form"
+          cardLabel="Epitaph stone"
+          cardText={<span className="font-display italic">&ldquo;{epitaph || "Write an epitaph"}&rdquo;</span>}
+          disabled={archived}
+          zoneLabel={archived ? "Already at rest" : "Lay to rest"}
+          zoneHint="Archives the project with this epitaph"
+          icon={ZoneIcon.grave}
+          tone="var(--c-archive)"
+        />
       </form>
     </div>
   );

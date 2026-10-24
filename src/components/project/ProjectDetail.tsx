@@ -16,6 +16,9 @@ import { StatusTag, VerdictBadge } from "@/components/ui/VerdictBadge";
 import { GraveLoader } from "@/components/ui/GraveLoader";
 import { Reveal } from "@/components/ui/Reveal";
 import { PathBody } from "./PathPanels";
+import { ActionZone, DragCard, ZoneIcon } from "@/components/canvas/dnd";
+import { Headstone } from "@/components/ui/Headstone";
+import { VerdictIcon } from "@/components/landing/Interactive";
 import { useRitual } from "@/components/magic/Ritual";
 
 const KIND_LABEL: Record<TimelineEvent["kind"], string> = {
@@ -149,46 +152,38 @@ export function ProjectDetail({ id }: { id: string }) {
 
         <Reveal className="rounded-xl border border-line bg-card p-5" delay={0.05}>
           <h2 className="font-display text-xl font-semibold">Choose a path</h2>
-          <p className="mt-1 text-sm text-ink-2">The verdict is a suggestion. You decide.</p>
-          <div role="radiogroup" aria-label="Revival path" className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
-            {VERDICT_ORDER.map((k) => {
-              const on = path === k;
-              const vv = VERDICTS[k];
-              return (
-                <button
-                  key={k}
-                  role="radio"
-                  aria-checked={on}
-                  onClick={() => {
-                    if (k === path) return;
-                    useRitual.getState().cast(k, p.name, 1700).then(() => {
+          <p className="mt-1 text-sm text-ink-2">The verdict is a suggestion. Drag the headstone into the path you choose.</p>
+          <div className="mt-4 grid gap-3 lg:grid-cols-[220px_1fr]">
+            <DragCard data={{ kind: "project", id: p.id, label: p.name }} hint="Drag into a path zone">
+              <div className="flex h-full flex-col items-center justify-center rounded-xl border border-line bg-paper p-4 text-center">
+                <Headstone score={a.score} archived={p.status === "archived"} sprout={a.score >= 55 && p.status !== "archived"} className="h-20 w-16" />
+                <p className="mt-2 font-display font-semibold">{p.name}</p>
+                <p className="font-mono text-xs text-ink-3">score {a.score} · drag me</p>
+              </div>
+            </DragCard>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3" aria-label="Revival paths">
+              {VERDICT_ORDER.map((k) => {
+                const vv = VERDICTS[k];
+                return (
+                  <ActionZone
+                    key={k}
+                    id={`path-${k}`}
+                    label={vv.label}
+                    hint={`${vv.path}${k === a.verdict ? " · suggested" : ""}${path === k ? " · current" : ""}`}
+                    accepts={["project"]}
+                    tone={vv.color}
+                    icon={<VerdictIcon v={k} />}
+                    className={path === k ? "!border-solid" : ""}
+                    onDrop={async () => {
+                      if (k === path) return;
+                      await useRitual.getState().cast(k, p.name, 1700);
                       choose(p.id, k);
                       track("path_chosen", { path: k });
-                    });
-                  }}
-                  className={`relative rounded-md border px-3 py-2.5 text-left transition-colors ${
-                    on ? "border-transparent" : "border-line hover:border-ink-3"
-                  }`}
-                  style={on ? { background: vv.soft } : undefined}
-                >
-                  {on && (
-                    <motion.span
-                      layoutId="path-outline"
-                      className="absolute inset-0 rounded-md border-2"
-                      style={{ borderColor: vv.color }}
-                      transition={{ type: "spring", stiffness: 500, damping: 40 }}
-                    />
-                  )}
-                  <span className="relative block text-sm font-semibold" style={{ color: on ? vv.color : undefined }}>
-                    {vv.label}
-                  </span>
-                  <span className="relative block text-xs text-ink-2">{vv.path}</span>
-                  {k === a.verdict && (
-                    <span className="relative mt-1 block font-mono text-[10px] uppercase tracking-wider text-ink-3">Suggested</span>
-                  )}
-                </button>
-              );
-            })}
+                    }}
+                  />
+                );
+              })}
+            </div>
           </div>
           <div className="mt-6 border-t border-line-2 pt-6">
             <PathBody project={p} a={a} />
@@ -277,17 +272,21 @@ export function ProjectDetail({ id }: { id: string }) {
         <Link href="/garden" className="font-medium text-moss hover:underline">
           ← Back to the garden
         </Link>
-        <button
-          className="text-ink-3 hover:text-clay"
-          onClick={() => {
+        <ActionZone
+          id="compost-detail"
+          label="Compost"
+          hint="Drop the headstone here to remove it"
+          accepts={["project"]}
+          tone="var(--clay)"
+          icon={ZoneIcon.compost}
+          compact
+          onDrop={() => {
             if (confirm(`Remove ${p.name} from your garden? This cannot be undone.`)) {
               remove(p.id);
               router.push("/garden");
             }
           }}
-        >
-          Remove from garden
-        </button>
+        />
       </div>
       <p className="mt-2 text-xs text-ink-3">Buried {ago(p.buriedOn)}.</p>
     </div>
@@ -354,25 +353,28 @@ function Reminder({ id, remindOn, onSet }: { id: string; remindOn?: string; onSe
       <h3 id={`remind-${id}`} className="text-sm font-semibold">
         Revisit later
       </h3>
-      {remindOn ? (
-        <p className="mt-1 text-sm text-ink-2">
-          We will nudge you on <strong className="text-ink">{fmtDate(remindOn)}</strong>.{" "}
-          <button className="font-medium text-moss hover:underline" onClick={() => onSet(undefined)}>
-            Cancel
-          </button>
-        </p>
-      ) : (
-        <>
-          <p className="mt-1 text-sm text-ink-2">A gentle nudge, never a nag. Pick when to look again.</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {opts.map(([l, d]) => (
-              <button key={l} className="btn btn-ghost !px-3 !py-1.5 text-sm" onClick={() => set(d)}>
-                {l}
-              </button>
-            ))}
+      <p className="mt-1 text-sm text-ink-2">
+        {remindOn ? (
+          <>
+            Nudge set for <strong className="text-ink">{fmtDate(remindOn)}</strong>. Drag the nudge somewhere else to change it.
+          </>
+        ) : (
+          "A gentle nudge, never a nag. Drag the nudge card into when you want to look again."
+        )}
+      </p>
+      <div className="mt-3 grid gap-2">
+        <DragCard data={{ kind: "nudge", id: `nudge-${id}`, label: "Nudge card" }} hint="Drag into a time zone">
+          <div className="flex items-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-sm font-medium">
+            <span className="text-dawn">{ZoneIcon.bell}</span> Nudge card
           </div>
-        </>
-      )}
+        </DragCard>
+        <div className="grid grid-cols-3 gap-2">
+          {opts.map(([l, d]) => (
+            <ActionZone key={l} id={`remind-${d}`} label={l} accepts={["nudge"]} compact tone="var(--dawn)" onDrop={() => set(d)} />
+          ))}
+        </div>
+        {remindOn && <ActionZone id="remind-clear" label="Clear nudge" accepts={["nudge"]} compact tone="var(--clay)" onDrop={() => onSet(undefined)} />}
+      </div>
     </div>
   );
 }

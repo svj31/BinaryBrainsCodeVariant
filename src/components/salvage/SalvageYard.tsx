@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGraveyard } from "@/lib/store";
 import type { Organ, Project } from "@/lib/types";
 import { useRitual } from "@/components/magic/Ritual";
 import { track } from "@/lib/consent";
+import { ActionZone, DragCard, useDnd } from "@/components/canvas/dnd";
 
 const KINDS: Organ["kind"][] = ["component", "script", "dataset", "design", "api", "research"];
 const KIND_META: Record<Organ["kind"], { label: string; tint: string; ink: string }> = {
@@ -88,7 +89,20 @@ export function SalvageYard() {
   const [q, setQ] = useState("");
   const [kind, setKind] = useState<Organ["kind"] | "all">("all");
   const [hot, setHot] = useState<string | null>(null);
-  const [borrowing, setBorrowing] = useState<Part | null>(null);
+  const [delivered, setDelivered] = useState<{ part: string; name: string; id: string } | null>(null);
+  const living = projects.filter((p) => p.status !== "archived");
+
+  const borrow = async (part: Part, t: Project) => {
+    if (t.id === part.from.id) return useDnd.getState().say(`${part.name} already belongs to ${t.name}.`);
+    if (t.organs.some((o) => o.id === `${part.id}~${t.id}`)) return useDnd.getState().say(`${t.name} already has ${part.name}.`);
+    await useRitual.getState().cast("borrow", `${part.name} → ${t.name}`, 1900);
+    update(t.id, {
+      organs: [...t.organs, { id: `${part.id}~${t.id}`, name: part.name, kind: part.kind, note: `Borrowed from ${part.from.name}` }],
+      timeline: [...t.timeline, { date: new Date().toISOString().slice(0, 10), kind: "afterlife", note: `Borrowed "${part.name}" from ${part.from.name}` }],
+    });
+    track("part_borrowed");
+    setDelivered({ part: part.name, name: t.name, id: t.id });
+  };
 
   const parts = useMemo<Part[]>(() => projects.flatMap((p) => p.organs.filter((o) => !o.id.includes("~")).map((o) => ({ ...o, from: p }))), [projects]);
   const borrowCount = (id: string) => projects.filter((p) => p.organs.some((o) => o.id.startsWith(`${id}~`))).length;
@@ -137,7 +151,30 @@ export function SalvageYard() {
       </label>
       <input id="yard-q" type="search" className="field mt-4 sm:w-96" placeholder="Search parts, projects, stack" value={q} onChange={(e) => setQ(e.target.value)} />
 
-      <motion.ul layout className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_280px]">
+      <aside className="order-first min-w-0 lg:order-last" aria-label="Borrow into a project">
+        <div className="lg:sticky lg:top-24">
+          <p className="eyebrow">Borrow into</p>
+          <p className="mt-1 text-sm text-ink-2">Drag a part card onto the project that should get it.</p>
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-2 lg:max-h-[70vh] lg:flex-col lg:overflow-y-auto lg:overflow-x-visible lg:pb-0">
+            {living.map((t) => (
+              <ActionZone
+                key={t.id}
+                id={`borrow-${t.id}`}
+                label={t.name}
+                accepts={["part"]}
+                compact
+                tone="var(--c-salvage)"
+                className="min-w-[180px] lg:min-w-0"
+                onDrop={(c) => borrow(c.payload as Part, t)}
+              >
+                <span className="relative ml-auto font-mono text-[11px] text-ink-3">{t.organs.length}</span>
+              </ActionZone>
+            ))}
+          </div>
+        </div>
+      </aside>
+      <motion.ul layout className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <AnimatePresence mode="popLayout">
           {shown.map((o, i) => {
             const n = borrowCount(o.id);
@@ -151,8 +188,9 @@ export function SalvageYard() {
                 transition={{ duration: 0.45, delay: Math.min(i * 0.04, 0.3), ease: [0.16, 1, 0.3, 1] }}
                 onMouseEnter={() => setHot(o.id)}
                 onMouseLeave={() => setHot(null)}
-                className="group flex flex-col overflow-hidden rounded-xl border border-line bg-card transition-shadow hover:shadow-[0_22px_44px_-28px_rgba(30,39,33,0.55)]"
               >
+                <DragCard data={{ kind: "part", id: o.id, label: o.name, payload: o }} hint="Drag onto a project in Borrow into" className="h-full">
+                <div className="group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-card transition-shadow hover:shadow-[0_22px_44px_-28px_rgba(30,39,33,0.55)]">
                 <KindArt kind={o.kind} hot={hot === o.id} />
                 <div className="flex flex-1 flex-col p-4">
                   <div className="flex items-start justify-between gap-2">
@@ -167,144 +205,42 @@ export function SalvageYard() {
                     <Link href={`/garden/${o.from.id}`} className="truncate text-ink-2 hover:text-ink">
                       from <span className="font-medium text-ink underline-offset-2 hover:underline">{o.from.name}</span>
                     </Link>
-                    <button className="btn btn-primary !px-3 !py-1.5 text-sm" onClick={() => setBorrowing(o)}>
-                      Borrow
-                    </button>
+                    <span className="shrink-0 font-mono text-[11px] uppercase tracking-wider text-ink-3">drag to borrow</span>
                   </div>
                 </div>
+                </div>
+                </DragCard>
               </motion.li>
             );
           })}
         </AnimatePresence>
       </motion.ul>
+      </div>
       {shown.length === 0 && (
         <div className="mt-6 rounded-xl border border-dashed border-line p-10 text-center text-ink-2">
           No parts match. Open any project and save parts from its Salvage path.
         </div>
       )}
 
-      <BorrowDialog part={borrowing} projects={projects} onClose={() => setBorrowing(null)} update={update} />
+      <AnimatePresence>
+        {delivered && (
+          <motion.div
+            role="status"
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            className="fixed right-4 bottom-4 z-[80] max-w-sm rounded-xl border border-moss bg-card p-4 shadow-2xl"
+          >
+            <p className="font-display text-lg font-semibold text-moss">Part delivered</p>
+            <p className="mt-1 text-sm text-ink-2">
+              <strong className="text-ink">{delivered.part}</strong> now lives in <strong className="text-ink">{delivered.name}</strong>.
+            </p>
+            <Link href={`/garden/${delivered.id}`} className="mt-2 inline-block text-sm font-semibold text-moss underline underline-offset-2">
+              Open {delivered.name}
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
-  );
-}
-
-function BorrowDialog({
-  part,
-  projects,
-  onClose,
-  update,
-}: {
-  part: Part | null;
-  projects: Project[];
-  onClose: () => void;
-  update: (id: string, patch: Partial<Project>) => void;
-}) {
-  const targets = projects.filter((p) => part && p.id !== part.from.id && p.status !== "archived");
-  const [target, setTarget] = useState("");
-  const [done, setDone] = useState<Project | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    setTarget("");
-    setDone(null);
-    setCopied(false);
-  }, [part]);
-
-  useEffect(() => {
-    if (!part) return;
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
-  }, [part, onClose]);
-
-  if (!part) return null;
-  const already = (t: Project) => t.organs.some((o) => o.id === `${part.id}~${t.id}`);
-
-  const borrow = async () => {
-    const t = projects.find((p) => p.id === target);
-    if (!t || already(t)) return;
-    await useRitual.getState().cast("borrow", `${part.name} → ${t.name}`, 1900);
-    update(t.id, {
-      organs: [...t.organs, { id: `${part.id}~${t.id}`, name: part.name, kind: part.kind, note: `Borrowed from ${part.from.name}` }],
-      timeline: [...t.timeline, { date: new Date().toISOString().slice(0, 10), kind: "afterlife", note: `Borrowed "${part.name}" from ${part.from.name}` }],
-    });
-    track("part_borrowed");
-    setDone(t);
-  };
-
-  const copy = async () => {
-    const text = `${part.name} (${part.kind}) from ${part.from.name}${part.from.repoUrl ? `: ${part.from.repoUrl}` : ""}${part.note ? `. ${part.note}` : ""}`;
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  };
-
-  return (
-    <AnimatePresence>
-      <motion.div className="fixed inset-0 z-[70] flex items-end justify-center p-3 sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-        <button className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]" aria-label="Close" onClick={onClose} />
-        <motion.div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="borrow-title"
-          className="relative w-full max-w-md overflow-hidden rounded-xl border border-line bg-card shadow-2xl"
-          initial={{ y: 40, scale: 0.96 }}
-          animate={{ y: 0, scale: 1 }}
-          transition={{ type: "spring", stiffness: 320, damping: 30 }}
-        >
-          <KindArt kind={part.kind} hot />
-          <div className="p-5">
-            {done ? (
-              <div role="status">
-                <h2 id="borrow-title" className="font-display text-xl font-semibold text-moss">
-                  Part delivered
-                </h2>
-                <p className="mt-2 text-ink-2">
-                  <strong className="text-ink">{part.name}</strong> now lives in <strong className="text-ink">{done.name}</strong>. It shows in that project&apos;s parts and timeline.
-                </p>
-                <div className="mt-5 flex gap-2">
-                  <Link href={`/garden/${done.id}`} className="btn btn-primary" onClick={onClose}>
-                    Open {done.name}
-                  </Link>
-                  <button className="btn btn-ghost" onClick={onClose}>
-                    Keep browsing
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <h2 id="borrow-title" className="font-display text-xl font-semibold">
-                  Borrow {part.name}
-                </h2>
-                <p className="mt-1 text-sm text-ink-2">From {part.from.name}. Pick the project that should get it.</p>
-                <label htmlFor="borrow-target" className="mt-4 block text-sm font-medium">
-                  Send to
-                </label>
-                <select id="borrow-target" className="field mt-1.5" value={target} onChange={(e) => setTarget(e.target.value)}>
-                  <option value="">Choose a project</option>
-                  {targets.map((t) => (
-                    <option key={t.id} value={t.id} disabled={already(t)}>
-                      {t.name}
-                      {already(t) ? " (already has it)" : ""}
-                    </option>
-                  ))}
-                </select>
-                <div className="mt-5 flex flex-wrap items-center gap-2">
-                  <button className="btn btn-primary" disabled={!target} onClick={borrow}>
-                    Borrow into project
-                  </button>
-                  <button className="btn btn-ghost" onClick={copy}>
-                    {copied ? "Reference copied" : "Copy reference"}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
   );
 }

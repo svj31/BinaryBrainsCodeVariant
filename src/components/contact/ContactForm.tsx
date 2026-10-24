@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Field, Honeypot } from "@/components/ui/Field";
 import { isEmail, lengthError, type Errors } from "@/lib/validate";
 import { track } from "@/lib/consent";
+import { SubmitByDrop, ZoneIcon, noEnterSubmit } from "@/components/canvas/dnd";
 
 export function ContactForm() {
   const [f, setF] = useState({ name: "", email: "", message: "" });
@@ -69,7 +70,7 @@ export function ContactForm() {
           <p className="mt-2 text-ink-2">Thanks, {f.name.split(" ")[0]}. We read every message and reply within a few days.</p>
         </motion.div>
       ) : (
-        <motion.form key="form" noValidate onSubmit={onSubmit} className="relative space-y-5 rounded-xl border border-line bg-card p-5 sm:p-7" exit={{ opacity: 0 }}>
+        <motion.form key="form" id="contact-form" noValidate onKeyDown={noEnterSubmit} onSubmit={onSubmit} className="relative space-y-5 rounded-xl border border-line bg-card p-5 sm:p-7" exit={{ opacity: 0 }}>
           <Honeypot value={hp} onChange={setHp} />
           <Field label="Your name" error={errors.name}>
             {(p) => <input {...p} className="field" autoComplete="name" value={f.name} maxLength={80} onChange={upd("name")} />}
@@ -85,9 +86,15 @@ export function ContactForm() {
               {serverErr}
             </p>
           )}
-          <button className="btn btn-primary" disabled={state === "sending"}>
-            {state === "sending" ? "Sending" : "Send message"}
-          </button>
+          <SubmitByDrop
+            formId="contact-form"
+            cardLabel="Letter"
+            cardText={state === "sending" ? "Sending..." : f.name.trim() ? `Letter from ${f.name.trim().split(" ")[0]}` : "Your letter"}
+            disabled={state === "sending"}
+            zoneLabel="Mailbox"
+            zoneHint="Drop the letter to send it"
+            icon={ZoneIcon.mail}
+          />
         </motion.form>
       )}
     </AnimatePresence>

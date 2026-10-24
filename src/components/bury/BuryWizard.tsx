@@ -15,6 +15,8 @@ import { VerdictBadge } from "@/components/ui/VerdictBadge";
 import { GraveLoader } from "@/components/ui/GraveLoader";
 import { useRitual } from "@/components/magic/Ritual";
 import { Burst } from "@/components/magic/Burst";
+import { ActionZone, DragCard, ZoneIcon } from "@/components/canvas/dnd";
+import { Headstone } from "@/components/ui/Headstone";
 
 interface Form {
   name: string;
@@ -340,10 +342,7 @@ export function BuryWizard() {
       <form
         noValidate
         className="relative mt-8"
-        onSubmit={(e) => {
-          e.preventDefault();
-          next();
-        }}
+        onSubmit={(e) => e.preventDefault()}
       >
         <Honeypot value={honeypot} onChange={setHoneypot} />
         <div className="overflow-hidden rounded-xl border border-line bg-card">
@@ -465,9 +464,33 @@ export function BuryWizard() {
           ) : (
             <span />
           )}
-          <button type="submit" className="btn btn-primary !px-5">
-            {step < 2 ? "Continue" : "Get the verdict"}
-          </button>
+          <span className="text-xs text-ink-3">Canvas Protocol: drag the card into the zone</span>
+        </div>
+        <div className="mt-3 grid items-stretch gap-3 sm:grid-cols-[1fr_auto_1fr]">
+          <DragCard data={{ kind: "autopsy", id: "autopsy", label: `${form.name || "Untitled"} autopsy` }} hint={step < 2 ? "Drag into Next step" : "Drag into the open grave"}>
+            <div className="flex h-full items-center gap-3 rounded-xl border border-line bg-card p-4">
+              <Headstone score={40 + form.done.length * 10} sprout={form.done.length > 0} className="h-12 w-10 shrink-0" />
+              <div className="min-w-0">
+                <p className="eyebrow">Autopsy card · step {step + 1}/3</p>
+                <p className="truncate font-display text-lg font-semibold">{form.name || "Untitled project"}</p>
+                <p className="text-xs text-ink-3">
+                  {form.done.length} finished · {form.left.length} left · {form.causes.length} causes
+                </p>
+              </div>
+            </div>
+          </DragCard>
+          <motion.span className="hidden self-center text-2xl text-ink-3 sm:block" animate={{ x: [0, 8, 0] }} transition={{ duration: 1.4, repeat: Infinity }} aria-hidden="true">
+            →
+          </motion.span>
+          <ActionZone
+            id="bury-next"
+            label={step < 2 ? "Next step" : "Open grave: get the verdict"}
+            hint={step < 2 ? `Checks this page, then opens “${STEPS[step + 1]}”` : "The keeper reads the stone"}
+            accepts={["autopsy"]}
+            onDrop={() => next()}
+            icon={step < 2 ? ZoneIcon.next : ZoneIcon.grave}
+            tone={step < 2 ? "var(--moss)" : "var(--dawn)"}
+          />
         </div>
       </form>
     </div>
@@ -501,7 +524,7 @@ function ListInput({
   };
   const msg = local || error;
   return (
-    <Field label={label} error={msg} hint="Press Enter or Add after each item">
+    <Field label={label} error={msg} hint="Type and press Enter to add each item">
       {(p) => (
         <div>
           <div className="flex gap-2">
@@ -518,9 +541,6 @@ function ListInput({
                 }
               }}
             />
-            <button type="button" className="btn btn-ghost" onClick={addItem}>
-              Add
-            </button>
           </div>
           <ul className="mt-2 flex flex-wrap gap-2">
             <AnimatePresence initial={false}>
