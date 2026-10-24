@@ -3,26 +3,13 @@ import Link from "next/link";
 import { Hero } from "@/components/landing/Hero";
 import { ScoreDemo } from "@/components/landing/ScoreDemo";
 import { Reveal } from "@/components/ui/Reveal";
+import { FinalCta, ProblemSection, WhoFor } from "@/components/landing/Sections";
 import { Journey, Marquee, TiltCard, VerdictExplorer } from "@/components/landing/Interactive";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-const PROBLEMS = [
-  {
-    title: "Projects stop without a decision",
-    body: "Time runs out, the scope grows, a new idea shows up. Nobody writes down why it stopped, so the same thing happens next time.",
-  },
-  {
-    title: "Good parts get buried with them",
-    body: "A working parser, a clean component, a dataset you spent a week on. All of it sits in a repo you will never open again.",
-  },
-  {
-    title: "Trackers only care about active work",
-    body: "Kanban boards manage what you are doing now. Nothing helps you decide what to do with what you already dropped.",
-  },
-];
 
 
 const FEATURES = [
@@ -61,16 +48,8 @@ export default function Home() {
             Unfinished does not mean worthless. It usually means undecided.
           </h2>
         </Reveal>
-        <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-line bg-line md:grid-cols-3">
-          {PROBLEMS.map((p, i) => (
-            <Reveal key={p.title} delay={i * 0.08} className="bg-card p-6">
-              <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-[10px] bg-dawn-soft font-mono text-sm font-medium text-[#7a4a0b]">
-                0{i + 1}
-              </span>
-              <h3 className="font-display text-xl font-semibold">{p.title}</h3>
-              <p className="mt-3 text-[0.95rem] leading-relaxed text-ink-2">{p.body}</p>
-            </Reveal>
-          ))}
+        <div className="mt-12">
+          <ProblemSection />
         </div>
       </section>
 
@@ -145,47 +124,21 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6" aria-labelledby="who-h">
-        <div className="grid gap-10 lg:grid-cols-2">
-          <Reveal>
-            <p className="eyebrow">Who it is for</p>
-            <h2 id="who-h" className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-              People with more ideas than time.
-            </h2>
-            <p className="mt-4 max-w-lg leading-relaxed text-ink-2">
-              If you have a folder of weekend builds that never got a Monday, this is your place. Not another project
-              manager. A quiet spot where those projects can rest, be understood, and maybe return.
-            </p>
-          </Reveal>
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {[
-              ["Students and hackathoners", "Weekend builds that never got a Monday."],
-              ["Indie developers", "Side projects stacked behind the day job."],
-              ["Designers and makers", "Half finished concepts and prototypes."],
-              ["Small student teams", "Shared ideas that faded when the team moved on."],
-            ].map(([t, b], i) => (
-              <Reveal as="li" key={t} delay={i * 0.06} className="rounded-lg border border-line bg-card p-5">
-                <h3 className="font-semibold">{t}</h3>
-                <p className="mt-1 text-sm text-ink-2">{b}</p>
-              </Reveal>
-            ))}
-          </ul>
+        <Reveal>
+          <p className="eyebrow">Who it is for</p>
+          <h2 id="who-h" className="mt-3 max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            People with more ideas than time.
+          </h2>
+          <p className="mt-3 max-w-xl text-ink-2">Not another project manager. A quiet place where unfinished work can rest, be understood, and maybe return. Pick who you are.</p>
+        </Reveal>
+        <div className="mt-10">
+          <WhoFor />
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 sm:px-6" aria-labelledby="cta-h">
-        <Reveal className="rounded-xl border border-ink bg-ink px-6 py-14 text-center text-paper sm:px-12">
-          <h2 id="cta-h" className="mx-auto max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            Pick one project you keep thinking about.
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-[#d9d4c8]">
-            Give it two minutes. You will leave with a verdict, the reasons behind it, and the first thing to do next.
-          </p>
-          <Link
-            href="/bury"
-            className="btn mt-8 border border-paper bg-paper !px-6 !py-3 text-base text-ink hover:bg-dawn-soft"
-          >
-            Bury your first project
-          </Link>
+        <Reveal>
+          <FinalCta />
         </Reveal>
       </section>
     </>
