@@ -23,7 +23,7 @@ export function GlassSearch({
   return (
     <motion.div
       className={`sw-glass relative rounded-full ${className}`}
-      animate={{ scale: focus ? 1.03 : 1, boxShadow: focus ? "0 0 0 3px color-mix(in srgb, var(--dawn) 35%, transparent), 0 16px 40px -18px rgba(242,179,74,0.7)" : undefined }}
+      animate={{ boxShadow: focus ? "0 0 0 3px color-mix(in srgb, var(--dawn) 35%, transparent), 0 16px 40px -18px rgba(242,179,74,0.7)" : undefined }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
       onPointerMove={(e) => {
         const r = e.currentTarget.getBoundingClientRect();
