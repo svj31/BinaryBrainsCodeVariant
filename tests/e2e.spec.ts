@@ -150,11 +150,13 @@ test.describe("SecondWind", () => {
     await page.goto("/garden/pocket-planner");
     await expect(page.getByText("7-day sprint")).toBeVisible();
     const boxes = page.getByRole("checkbox");
-    for (let i = 0; i < 7; i++) await boxes.nth(i).check();
+    for (let i = 0; i < 6; i++) await boxes.nth(i).check();
+    await boxes.nth(6).click(); // last day casts the revive ritual first
     await expect(page.getByText(/Alive again. Pocket Planner has left/)).toBeVisible();
     await page.getByRole("radio", { name: /Salvage/ }).click();
     await page.getByLabel("Part name").fill("Deadline extractor");
     await page.getByRole("button", { name: "Save part" }).click();
+    await expect(page.getByRole("button", { name: "Remove Deadline extractor" })).toBeVisible({ timeout: 6000 });
     await page.goto("/salvage");
     await expect(page.getByRole("heading", { name: "Deadline extractor" })).toBeVisible();
   });
@@ -206,5 +208,30 @@ test.describe("SecondWind", () => {
       const missing = await page.$$eval("img:not([alt]), [role=img]:not([aria-label]):not([aria-labelledby])", (els) => els.length);
       expect(missing, p).toBe(0);
     }
+  });
+
+  test("salvage yard: borrow moves a part into another project", async ({ page }) => {
+    await noConsent(page);
+    await page.goto("/salvage");
+    const card = page.locator("li", { has: page.getByRole("heading", { name: "Syllabus date parser" }) });
+    await card.getByRole("button", { name: "Borrow" }).click();
+    await page.getByLabel("Send to").selectOption("study-buddy");
+    await page.getByRole("button", { name: "Borrow into project" }).click();
+    await expect(page.getByText("Part delivered")).toBeVisible({ timeout: 8000 });
+    await page.getByRole("link", { name: "Open Study Buddy" }).click();
+    await expect(page.getByText('Borrowed "Syllabus date parser" from Pocket Planner')).toBeVisible();
+  });
+
+  test("sample project pre-fills the autopsy", async ({ page }) => {
+    await noConsent(page);
+    await page.goto("/bury?sample=1");
+    await expect(page.getByLabel("Project name")).toHaveValue("Lecture Lens");
+  });
+
+  test("death report: clicking a cause focuses it", async ({ page }) => {
+    await noConsent(page);
+    await page.goto("/insights");
+    await page.getByRole("button", { name: /Scope creep/ }).click();
+    await expect(page.getByText("Fix for scope creep:")).toBeVisible();
   });
 });
