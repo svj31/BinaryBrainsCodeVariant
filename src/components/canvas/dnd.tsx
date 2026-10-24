@@ -85,7 +85,8 @@ export function DragCard({
   const drag = useDnd((s) => s.drag);
   const mode = useDnd((s) => s.mode);
   const lifted = drag?.id === data.id && drag.kind === data.kind;
-  const [ghost, setGhost] = useState<{ x: number; y: number; w: number; h: number; ox: number; oy: number; tilt: number } | null>(null);
+  const [ghost, setGhost] = useState<{ x: number; y: number; w: number; h: number; ox: number; oy: number; tilt: number; sx: number; sy: number } | null>(null);
+  const over = useDnd((s) => s.over);
   const hintId = useId();
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -96,6 +97,10 @@ export function DragCard({
     const sy = e.clientY;
     let started = false;
     let lastX = sx;
+    let lastY = sy;
+    let lastT = performance.now();
+    let vx = 0;
+    let vy = 0;
 
     const move = (ev: PointerEvent) => {
       if (!started) {
@@ -105,9 +110,18 @@ export function DragCard({
         document.body.classList.add("sw-dragging");
       }
       ev.preventDefault();
-      const tilt = Math.max(-12, Math.min(12, (ev.clientX - lastX) * 0.8));
+      // jelly physics: the card stretches along its direction of travel and squashes across it
+      const now = performance.now();
+      const dt = Math.max(8, now - lastT);
+      vx = vx * 0.6 + ((ev.clientX - lastX) / dt) * 0.4 * 16;
+      vy = vy * 0.6 + ((ev.clientY - lastY) / dt) * 0.4 * 16;
       lastX = ev.clientX;
-      setGhost({ x: ev.clientX, y: ev.clientY, w: r.width, h: r.height, ox: sx - r.left, oy: sy - r.top, tilt });
+      lastY = ev.clientY;
+      lastT = now;
+      const tilt = Math.max(-16, Math.min(16, vx * 0.9));
+      const ax = Math.min(0.35, Math.abs(vx) * 0.012);
+      const ay = Math.min(0.35, Math.abs(vy) * 0.012);
+      setGhost({ x: ev.clientX, y: ev.clientY, w: r.width, h: r.height, ox: sx - r.left, oy: sy - r.top, tilt, sx: 1 + ax - ay * 0.5, sy: 1 + ay - ax * 0.5 });
       let over: string | null = null;
       for (const z of useDnd.getState().zones.values()) {
         const zr = z.el.getBoundingClientRect();
@@ -156,8 +170,13 @@ export function DragCard({
         data-card={data.kind}
         onPointerDown={onPointerDown}
         onKeyDown={onKeyDown}
-        animate={{ opacity: lifted && mode === "pointer" ? 0.35 : 1, scale: lifted && mode === "keyboard" ? 1.03 : 1 }}
-        whileHover={disabled ? undefined : { y: -3 }}
+        animate={{
+          opacity: lifted && mode === "pointer" ? 0.3 : 1,
+          scale: lifted && mode === "pointer" ? 0.94 : lifted && mode === "keyboard" ? 1.05 : 1,
+          filter: lifted && mode === "pointer" ? "grayscale(0.8) blur(1px)" : "grayscale(0) blur(0px)",
+        }}
+        whileHover={disabled ? undefined : { y: -4, scaleX: 1.03, scaleY: 0.97, transition: { type: "spring", stiffness: 500, damping: 12 } }}
+        whileTap={disabled ? undefined : { scaleX: 0.95, scaleY: 1.05 }}
         className={`relative touch-none select-none ${disabled ? "cursor-not-allowed opacity-60" : "cursor-grab"} ${lifted && mode === "keyboard" ? "ring-2 ring-dawn ring-offset-2" : ""} ${className}`}
       >
         {children}
@@ -172,12 +191,27 @@ export function DragCard({
             style={{ transform: `translate(${ghost.x - ghost.ox}px, ${ghost.y - ghost.oy}px)`, width: ghost.w }}
             aria-hidden="true"
           >
-            <div
-              className="rounded-xl shadow-[0_30px_60px_-20px_rgba(30,39,33,0.55)] ring-2 ring-dawn transition-transform duration-150"
-              style={{ transform: `rotate(${ghost.tilt}deg) scale(1.04)` }}
+            <motion.div
+              className="relative rounded-xl shadow-[0_30px_60px_-20px_rgba(30,39,33,0.55)] ring-2 ring-dawn"
+              style={{ transformOrigin: `${ghost.ox}px ${ghost.oy}px`, transformPerspective: 700 }}
+              initial={{ scale: 0.9, rotateX: 0 }}
+              animate={
+                over
+                  ? // hovering a zone: the card shrinks and is drawn in, like being sipped into a cauldron
+                    { scaleX: 0.62, scaleY: 0.62, rotate: 0, rotateX: 18, opacity: 0.85, filter: "drop-shadow(0 0 18px rgba(242,179,74,0.9)) brightness(1.15)" }
+                  : { scaleX: 1.1 * ghost.sx, scaleY: 1.1 * ghost.sy, rotate: ghost.tilt, rotateX: 0, opacity: 1, filter: "drop-shadow(0 0 0 rgba(0,0,0,0)) brightness(1)" }
+              }
+              transition={{ type: "spring", stiffness: 520, damping: 18, mass: 0.6 }}
             >
               {children}
-            </div>
+              <motion.span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 rounded-xl"
+                style={{ background: "radial-gradient(circle at 30% 20%, rgba(255,226,168,0.55), transparent 60%)" }}
+                animate={{ opacity: [0.2, 0.6, 0.2] }}
+                transition={{ duration: 1, repeat: Infinity }}
+              />
+            </motion.div>
           </div>,
           document.body,
         )}
@@ -248,10 +282,15 @@ export function ActionZone({
         } else if (e.key === "Escape") useDnd.getState().end();
       }}
       animate={{
-        scale: hot ? 1.04 : live ? 1.01 : 1,
+        scale: hot ? 1.06 : live ? [1, 1.025, 1] : 1,
+        scaleX: hot ? [1, 1.08, 0.98, 1.04] : 1,
         borderColor: hot ? tone : live ? tone : "var(--line)",
       }}
-      transition={{ type: "spring", stiffness: 380, damping: 26 }}
+      transition={{
+        default: { type: "spring", stiffness: 380, damping: 14 },
+        scale: live && !hot ? { duration: 1.2, repeat: Infinity } : { type: "spring", stiffness: 380, damping: 14 },
+        scaleX: { duration: 0.55, ease: "easeOut" },
+      }}
       className={`relative flex items-center gap-3 overflow-hidden rounded-xl border-2 border-dashed bg-card/80 outline-none ${compact ? "p-3" : "p-4"} ${live ? "" : "opacity-90"} ${className}`}
       style={{ boxShadow: hot ? `0 0 0 4px color-mix(in srgb, ${tone} 22%, transparent), 0 18px 40px -20px ${tone}` : undefined }}
     >

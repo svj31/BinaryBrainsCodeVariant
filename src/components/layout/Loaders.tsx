@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { GraveLoader } from "@/components/ui/GraveLoader";
+import { SpellLoader, spellFor, type SpellVariant } from "@/components/ui/SpellLoader";
 
 /** Fades the server-rendered boot screen once the app is interactive. */
 export function BootDone() {
@@ -26,6 +26,7 @@ export function RouteProgress() {
   const path = usePathname();
   const [active, setActive] = useState(false);
   const [slow, setSlow] = useState(false);
+  const [variant, setVariant] = useState<SpellVariant>("portal");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
@@ -35,9 +36,10 @@ export function RouteProgress() {
       if (!a || a.target === "_blank" || a.hasAttribute("download")) return;
       const url = new URL(a.href, location.href);
       if (url.origin !== location.origin || (url.pathname === location.pathname && url.search === location.search)) return;
+      setVariant(spellFor(url.pathname));
       setActive(true);
       clearTimeout(timer.current);
-      timer.current = setTimeout(() => setSlow(true), 450);
+      timer.current = setTimeout(() => setSlow(true), 120);
     };
     document.addEventListener("click", click, true);
     return () => document.removeEventListener("click", click, true);
@@ -45,9 +47,10 @@ export function RouteProgress() {
 
   useEffect(() => {
     clearTimeout(timer.current);
-    setSlow(false);
+    // hold the spell a beat so each route's loader is actually seen
+    const s = setTimeout(() => setSlow(false), 700);
     const t = setTimeout(() => setActive(false), 250);
-    return () => clearTimeout(t);
+    return () => (clearTimeout(t), clearTimeout(s));
   }, [path]);
 
   return (
@@ -73,12 +76,14 @@ export function RouteProgress() {
       <AnimatePresence>
         {slow && (
           <motion.div
-            className="fixed inset-0 z-[105] flex items-center justify-center bg-paper/75 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[105] flex items-center justify-center bg-paper/80 backdrop-blur-md"
+            initial={{ opacity: 0, clipPath: "circle(0% at 50% 50%)" }}
+            animate={{ opacity: 1, clipPath: "circle(75% at 50% 50%)" }}
+            exit={{ opacity: 0, clipPath: "circle(0% at 50% 50%)", transition: { duration: 0.45 } }}
           >
-            <GraveLoader label="Walking to the next plot" />
+            <motion.div initial={{ scale: 0.6, rotateX: 40, opacity: 0 }} animate={{ scale: 1, rotateX: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 200, damping: 18 }} style={{ transformPerspective: 800 }}>
+              <SpellLoader variant={variant} />
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -3,17 +3,20 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
 import { resetConsent } from "@/lib/consent";
+import { StatusIndicator } from "@/components/ui/StatusIndicator";
+import { Reveal } from "@/components/ui/Reveal";
 
 export function Footer() {
   return (
     <footer className="mt-24 border-t border-line bg-paper-2">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-        <div>
+        <Reveal from="right">
           <Logo animated={false} size={30} />
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-ink-2">
             A place for unfinished projects to rest, and a clear way to decide which ones deserve another go.
           </p>
-        </div>
+          <StatusIndicator className="mt-4" />
+        </Reveal>
         <FooterCol
           title="Product"
           links={[
@@ -63,7 +66,7 @@ export function Footer() {
 
 function FooterCol({ title, links }: { title: string; links: [string, string][] }) {
   return (
-    <div>
+    <Reveal from="up" delay={0.08}>
       <h2 className="eyebrow">{title}</h2>
       <ul className="mt-3 space-y-2 text-sm">
         {links.map(([href, label]) => (
@@ -74,6 +77,6 @@ function FooterCol({ title, links }: { title: string; links: [string, string][] 
           </li>
         ))}
       </ul>
-    </div>
+    </Reveal>
   );
 }

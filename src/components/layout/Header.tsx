@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Logo } from "@/components/brand/Logo";
+import { ThemeSwitch } from "./ThemeSwitch";
+import { CommandChip } from "./CommandBox";
 
 const NAV = [
   { href: "/garden", label: "Garden" },
@@ -21,7 +23,7 @@ export function Header() {
   const active = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line-2 bg-paper/90 backdrop-blur-md">
+    <motion.header className="sticky top-0 z-50 border-b border-line-2 bg-paper/90 backdrop-blur-sm" initial={{ y: -80 }} animate={{ y: 0 }} transition={{ type: "spring", stiffness: 160, damping: 20, delay: 0.3 }}>
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[70] focus:rounded focus:bg-ink focus:px-3 focus:py-2 focus:text-paper"
@@ -34,7 +36,8 @@ export function Header() {
         </Link>
 
         <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
-          {NAV.map((n) => (
+          {NAV.map((n, i) => (
+            <motion.span key={n.href} initial={{ y: -20, opacity: 0, rotateX: -90 }} animate={{ y: 0, opacity: 1, rotateX: 0 }} transition={{ delay: 0.5 + i * 0.1 }} whileHover={{ y: -2 }}>
             <Link
               key={n.href}
               href={n.href}
@@ -50,10 +53,13 @@ export function Header() {
                 />
               )}
             </Link>
+            </motion.span>
           ))}
         </nav>
 
         <div className="flex items-center gap-2">
+          <CommandChip />
+          <ThemeSwitch />
           <Link href="/bury" className="btn btn-primary hidden !py-2 text-sm sm:inline-flex">
             Bury a project
           </Link>
@@ -108,6 +114,6 @@ export function Header() {
           </motion.nav>
         )}
       </AnimatePresence>
-    </header>
+    </motion.header>
   );
 }

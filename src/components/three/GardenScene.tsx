@@ -5,6 +5,7 @@ import { ContactShadows, OrbitControls } from "@react-three/drei";
 import { Suspense, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import type { Status, Verdict } from "@/lib/types";
+import { useVisible } from "@/lib/useVisible";
 
 export interface Stone {
   id: string;
@@ -58,7 +59,7 @@ const DAWN = "#f2b34a";
 
 /** A soft round glow sprite drawn once on a canvas. */
 let glowTex: THREE.Texture | null = null;
-function glowTexture() {
+export function glowTexture() {
   if (glowTex) return glowTex;
   const c = document.createElement("canvas");
   c.width = c.height = 128;
@@ -100,7 +101,7 @@ function layout(stones: Stone[]) {
 
 export const stoneHeight = (score: number) => 0.85 + (score / 100) * 0.9;
 
-function archGeometry(height: number) {
+export function archGeometry(height: number) {
   const w = 0.92;
   const shape = new THREE.Shape();
   shape.moveTo(-w / 2, 0);
@@ -257,7 +258,7 @@ function Headstone({
           }}
           onPointerOut={() => onHover(null)}
         >
-          <mesh geometry={geo} castShadow receiveShadow>
+          <mesh geometry={geo}>
             <meshStandardMaterial
               color={archived ? theme.stoneOld : theme.stone}
               roughness={0.92}
@@ -583,8 +584,7 @@ function Scene({
         position={theme.sun.pos}
         intensity={theme.sun.intensity}
         color={theme.sun.color}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
+
         shadow-camera-left={-10}
         shadow-camera-right={10}
         shadow-camera-top={10}
@@ -605,7 +605,7 @@ function Scene({
       )}
       <group ref={spin}>
         <Ground theme={theme} />
-        <Grass count={260} color={theme.grass} />
+        <Grass count={160} color={theme.grass} />
         {placed.map(({ stone, pos, rot }, i) => (
           <Headstone
             key={stone.id}
@@ -622,7 +622,7 @@ function Scene({
             delay={i * 0.08}
           />
         ))}
-        <ContactShadows position={[0, 0.01, 0]} opacity={night ? 0.55 : 0.35} scale={22} blur={2.4} far={3} />
+        <ContactShadows frames={1} resolution={256} position={[0, 0.01, 0]} opacity={night ? 0.55 : 0.35} scale={22} blur={2.4} far={3} />
       </group>
       <Motes count={night ? 70 : 160} night={night} />
       {mode === "hero" && <AimCamera />}
@@ -648,11 +648,13 @@ export default function GardenScene(props: Props) {
   const { mode = "app", className = "", stones, selectedId, onSelect } = props;
   const [hoverId, setHoverId] = useState<string | null>(null);
   const labels = useRef<LabelMap>(new Map());
+  const box = useRef<HTMLDivElement>(null);
+  const visible = useVisible(box);
   return (
-    <div className={`relative ${className}`} data-cursor={mode === "app" ? (hoverId ? "stone" : "drag") : undefined}>
+    <div ref={box} className={`relative isolate ${className}`} data-cursor={mode === "app" ? (hoverId ? "stone" : "drag") : undefined}>
       <Canvas
-        shadows
-        dpr={[1, 1.75]}
+        frameloop={visible ? "always" : "never"}
+        dpr={[1, 1.5]}
         camera={{ position: mode === "hero" ? [0, 4.6, 9.5] : [0, 7, 9.6], fov: 46 }}
         gl={{ antialias: true, powerPreference: "high-performance" }}
         fallback={

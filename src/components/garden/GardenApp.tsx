@@ -9,7 +9,10 @@ import { useAssessed, useGraveyard } from "@/lib/store";
 import { VERDICTS, VERDICT_ORDER } from "@/lib/verdicts";
 import type { Verdict } from "@/lib/types";
 import { track } from "@/lib/consent";
-import { GraveLoader } from "@/components/ui/GraveLoader";
+import { SpellLoader } from "@/components/ui/SpellLoader";
+import { SlideToUnlock } from "@/components/ui/SlideToUnlock";
+import { GlassSearch } from "@/components/ui/GlassSearch";
+import { SplitText } from "@/components/motion/Scroll3D";
 import { LedgerView, PlotsView, TimelineView } from "./Views";
 import { QuickPanel } from "./QuickPanel";
 import { useRitual } from "@/components/magic/Ritual";
@@ -18,11 +21,11 @@ import { ActionZone, DragCard, ZoneIcon, useDnd } from "@/components/canvas/dnd"
 import { Headstone } from "@/components/ui/Headstone";
 import { VIEWS, ViewSwitcher, type ViewId } from "./ViewSwitcher";
 
-const GardenScene = dynamic(() => import("@/components/three/GardenScene"), {
+const SpaceGarden = dynamic(() => import("@/components/three/SpaceGarden"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full items-center justify-center">
-      <GraveLoader label="Growing the garden" />
+    <div className="flex h-full items-center justify-center text-[#f4f1e6]">
+      <SpellLoader variant="portal" label="Opening the star gate" />
     </div>
   ),
 });
@@ -45,6 +48,7 @@ export function GardenApp() {
   const update = useGraveyard((s) => s.update);
   const remove = useGraveyard((s) => s.remove);
   const [toast, setToast] = useState<string | null>(null);
+  const [pending, setPending] = useState<{ kind: "compost" | "replant"; id: string; label: string } | null>(null);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3500);
@@ -103,7 +107,7 @@ export function GardenApp() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">Your graveyard</p>
-          <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">The Garden</h1>
+          <SplitText as="h1" className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl" text="The Infinite Garden" />
           <p className="mt-1 text-ink-2">
             {all.length} projects resting. {counts.revive} ready to revive.
           </p>
@@ -112,29 +116,18 @@ export function GardenApp() {
       </div>
 
       <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="relative lg:w-80">
-          <label htmlFor="garden-search" className="sr-only">
-            Search projects
-          </label>
-          <svg className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-3" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.6" fill="none" />
-            <path d="M11 11l3.5 3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
-          <input
-            id="garden-search"
-            type="search"
-            className="field !pl-9"
-            placeholder="Search names, tags, stack"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
+        <GlassSearch id="garden-search" label="Search projects" className="lg:w-80" placeholder="Search names, tags, stack" value={query} onChange={setQuery} />
         <div className="flex gap-2 overflow-x-auto pb-1 lg:pb-0" role="group" aria-label="Filter by verdict">
-          {(["all", "high", ...VERDICT_ORDER] as Filter[]).map((f) => {
+          {(["all", "high", ...VERDICT_ORDER] as Filter[]).map((f, i) => {
             const active = filter === f;
             const label = f === "all" ? "All" : f === "high" ? "High potential" : VERDICTS[f].label;
             return (
-              <button
+              <motion.button
+                initial={{ opacity: 0, y: 20, rotateX: -60 }}
+                animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                transition={{ delay: 0.3 + i * 0.06 }}
+                whileHover={{ y: -2, scale: 1.04 }}
+                whileTap={{ scale: 0.94 }}
                 key={f}
                 onClick={() => setFilter(f)}
                 aria-pressed={active}
@@ -143,7 +136,7 @@ export function GardenApp() {
                 }`}
               >
                 {label} <span className={`font-mono text-xs ${active ? "text-paper/75" : "text-ink-3"}`}>{counts[f]}</span>
-              </button>
+              </motion.button>
             );
           })}
         </div>
@@ -166,10 +159,10 @@ export function GardenApp() {
               {items.length === 0 ? (
                 <EmptyState query={query} onClear={() => (setQuery(""), setFilter("all"))} />
               ) : view === "garden" ? (
-                <div className="relative h-[460px] overflow-hidden rounded-xl border border-[#1d2f3a] bg-[#0d1b26] shadow-[0_30px_80px_-40px_rgba(13,27,38,0.8)] sm:h-[560px]">
-                  <GardenScene stones={stones} selectedId={selectedId} onSelect={select} className="h-full w-full" />
-                  <p className="pointer-events-none absolute bottom-3 left-3 rounded-[6px] border border-white/10 bg-[#0d1b26]/80 px-2.5 py-1 text-xs text-[#d9dce4] backdrop-blur-sm">
-                    Drag to look around. Brighter glow means higher revival potential.
+                <div className="relative h-[520px] overflow-hidden rounded-2xl border border-[#1d2f3a] bg-[#060d14] shadow-[0_40px_100px_-40px_rgba(13,27,38,0.9)] sm:h-[68vh] sm:min-h-[560px]">
+                  <SpaceGarden stones={stones} selectedId={selectedId} onSelect={select} className="h-full w-full" />
+                  <p className="pointer-events-none absolute bottom-3 left-3 max-w-[90%] rounded-full border border-white/10 bg-[#0d1b26]/70 px-3 py-1 text-xs text-[#d9dce4] backdrop-blur-md">
+                    Drag to look · <kbd className="font-mono">W A S D</kbd> to fly · <kbd className="font-mono">Q E</kbd> down/up · scroll to thrust · Shift to boost · click a stone to glide to it
                   </p>
                 </div>
               ) : view === "plots" ? (
@@ -219,12 +212,7 @@ export function GardenApp() {
                 icon={ZoneIcon.compost}
                 tone="var(--clay)"
                 compact
-                onDrop={(c) => {
-                  if (confirm(`Remove ${c.label} from your garden?`)) {
-                    remove(c.id);
-                    setToast(`${c.label} was composted`);
-                  }
-                }}
+                onDrop={(c) => setPending({ kind: "compost", id: c.id, label: c.label })}
               />
             </div>
             <AnimatePresence>
@@ -259,12 +247,53 @@ export function GardenApp() {
             compact
             tone="var(--moss)"
             className="!py-1.5"
-            onDrop={() => {
-              if (confirm("Reset the garden to the sample projects? Projects you added will be removed.")) useRitual.getState().cast("reset", undefined, 1500).then(resetDemo);
-            }}
+            onDrop={() => setPending({ kind: "replant", id: "seeds", label: "the garden" })}
           />
         </div>
       </div>
+
+      {/* Slide to confirm: destructive drops ask for a deliberate gesture instead of a dialog */}
+      <AnimatePresence>
+        {pending && (
+          <motion.div className="fixed inset-0 z-[90] flex items-end justify-center bg-[#0b1620]/50 p-4 backdrop-blur-sm sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPending(null)}>
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label={pending.kind === "compost" ? `Compost ${pending.label}` : "Replant the garden"}
+              onClick={(e) => e.stopPropagation()}
+              className="sw-glass w-full max-w-md rounded-2xl p-6"
+              initial={{ y: 60, rotateX: 40, scale: 0.9, opacity: 0 }}
+              animate={{ y: 0, rotateX: 0, scale: 1, opacity: 1 }}
+              exit={{ y: 40, scale: 0.95, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 22 }}
+              style={{ transformPerspective: 900 }}
+            >
+              <p className="eyebrow">{pending.kind === "compost" ? "Compost" : "Replant"}</p>
+              <h2 className="mt-2 font-display text-2xl font-semibold">
+                {pending.kind === "compost" ? `Return ${pending.label} to the soil?` : "Reset to the sample projects?"}
+              </h2>
+              <p className="mt-2 text-sm text-ink-2">
+                {pending.kind === "compost" ? "It will be removed from your garden." : "Projects you added will be removed."} Slide the stone to confirm, or tap outside to keep it.
+              </p>
+              <div className="mt-5">
+                <SlideToUnlock
+                  label={pending.kind === "compost" ? "Slide to compost" : "Slide to replant"}
+                  done={pending.kind === "compost" ? "Composted" : "Replanting"}
+                  tone={pending.kind === "compost" ? "var(--clay)" : "var(--moss)"}
+                  onUnlock={() => {
+                    const p = pending;
+                    setPending(null);
+                    if (p.kind === "compost") {
+                      remove(p.id);
+                      setToast(`${p.label} was composted`);
+                    } else useRitual.getState().cast("reset", undefined, 1500).then(resetDemo);
+                  }}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile bottom sheet */}
       <AnimatePresence>

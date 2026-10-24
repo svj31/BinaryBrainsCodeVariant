@@ -5,6 +5,8 @@ import { ScoreDemo } from "@/components/landing/ScoreDemo";
 import { Reveal } from "@/components/ui/Reveal";
 import { FinalCta, ProblemSection, WhoFor } from "@/components/landing/Sections";
 import { Journey, Marquee, TiltCard, VerdictExplorer } from "@/components/landing/Interactive";
+import { Drift, Fly, SplitText, Tilt3D } from "@/components/motion/Scroll3D";
+import { IslandToc } from "@/components/landing/IslandToc";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -39,33 +41,30 @@ export default function Home() {
   return (
     <>
       <Hero />
+      <IslandToc />
       <Marquee />
 
-      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6" aria-labelledby="problem-h">
+      <section id="problem" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6" aria-labelledby="problem-h">
         <Reveal>
-          <p className="eyebrow">The problem</p>
-          <h2 id="problem-h" className="mt-3 max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            Unfinished does not mean worthless. It usually means undecided.
-          </h2>
+          <Drift amount={60}><p className="eyebrow">The problem</p></Drift>
+          <SplitText as="h2" id="problem-h" className="mt-3 max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl" text="Unfinished does not mean worthless. It usually means undecided." />
         </Reveal>
-        <div className="mt-12">
+        <Fly from="left" delay={0.15} className="mt-12">
           <ProblemSection />
-        </div>
+        </Fly>
       </section>
 
       <section id="how" className="scroll-mt-20 border-y border-line-2 bg-paper-2" aria-labelledby="how-h">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
           <Reveal>
-            <p className="eyebrow">How it works</p>
-            <h2 id="how-h" className="mt-3 max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-              From a dusty folder to a clear next step in about two minutes.
-            </h2>
+            <Drift amount={-60}><p className="eyebrow">How it works</p></Drift>
+            <SplitText as="h2" id="how-h" className="mt-3 max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl" text="From a dusty folder to a clear next step in about two minutes." />
           </Reveal>
           <div className="mt-12">
             <Journey />
           </div>
 
-          <Reveal className="mt-16">
+          <Reveal className="mt-16" from="depth">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h3 className="font-display text-2xl font-semibold">Try the score</h3>
@@ -79,27 +78,23 @@ export default function Home() {
 
       <section id="verdicts" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6" aria-labelledby="verdicts-h">
         <Reveal>
-          <p className="eyebrow">The five verdicts</p>
-          <h2 id="verdicts-h" className="mt-3 max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            Not every project should come back. Each one gets an honest path.
-          </h2>
+          <Drift amount={60}><p className="eyebrow">The five verdicts</p></Drift>
+          <SplitText as="h2" id="verdicts-h" className="mt-3 max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl" text="Not every project should come back. Each one gets an honest path." />
         </Reveal>
-        <div className="mt-10">
+        <Tilt3D className="mt-10">
           <VerdictExplorer />
-        </div>
+        </Tilt3D>
       </section>
 
-      <section className="border-y border-line-2 bg-paper-2" aria-labelledby="features-h">
+      <section id="beyond" className="scroll-mt-20 border-y border-line-2 bg-paper-2" aria-labelledby="features-h">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
           <Reveal>
-            <p className="eyebrow">Beyond the verdict</p>
-            <h2 id="features-h" className="mt-3 max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-              A graveyard you can learn from, borrow from and come back to.
-            </h2>
+            <Drift amount={-60}><p className="eyebrow">Beyond the verdict</p></Drift>
+            <SplitText as="h2" id="features-h" className="mt-3 max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl" text="A graveyard you can learn from, borrow from and come back to." />
           </Reveal>
           <div className="mt-10 grid gap-4 md:grid-cols-2">
             {FEATURES.map((f, i) => (
-              <Reveal key={f.title} delay={i * 0.06}>
+              <Reveal key={f.title} delay={i * 0.08} from={i % 2 ? "left" : "right"}>
                 <TiltCard className="h-full">
                 <Link
                   href={f.href}
@@ -123,23 +118,21 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6" aria-labelledby="who-h">
+      <section id="who" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6" aria-labelledby="who-h">
         <Reveal>
-          <p className="eyebrow">Who it is for</p>
-          <h2 id="who-h" className="mt-3 max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            People with more ideas than time.
-          </h2>
-          <p className="mt-3 max-w-xl text-ink-2">Not another project manager. A quiet place where unfinished work can rest, be understood, and maybe return. Pick who you are.</p>
+          <Drift amount={60}><p className="eyebrow">Who it is for</p></Drift>
+          <SplitText as="h2" id="who-h" className="mt-3 max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl" text="People with more ideas than time." />
+          <p className="mt-3 max-w-xl text-ink-2 sw-float">Not another project manager. A quiet place where unfinished work can rest, be understood, and maybe return. Pick who you are.</p>
         </Reveal>
-        <div className="mt-10">
+        <Fly from="right" delay={0.15} className="mt-10">
           <WhoFor />
-        </div>
+        </Fly>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 sm:px-6" aria-labelledby="cta-h">
-        <Reveal>
+      <section id="begin" className="mx-auto max-w-7xl scroll-mt-20 px-4 sm:px-6" aria-labelledby="cta-h">
+        <Tilt3D>
           <FinalCta />
-        </Reveal>
+        </Tilt3D>
       </section>
     </>
   );

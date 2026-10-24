@@ -8,6 +8,9 @@ import { assess } from "@/lib/score";
 import { VERDICTS } from "@/lib/verdicts";
 import { ago } from "@/lib/format";
 import { Headstone } from "@/components/ui/Headstone";
+import { useRouter } from "next/navigation";
+import { SlideToUnlock } from "@/components/ui/SlideToUnlock";
+import { SplitText } from "@/components/motion/Scroll3D";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 const P = { stroke: "currentColor", strokeWidth: 1.7, fill: "none", strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -203,6 +206,8 @@ function Stars() {
 /* ---------- Final call to action ---------- */
 export function FinalCta() {
   const [grow, setGrow] = useState(false);
+  const [pull, setPull] = useState(0);
+  const router = useRouter();
   return (
     <div className="relative overflow-hidden rounded-2xl bg-[#0d1b26] px-6 py-14 text-[#f4f1e6] sm:px-12 sm:py-20">
       <Stars />
@@ -210,11 +215,12 @@ export function FinalCta() {
       <div className="relative grid items-center gap-10 md:grid-cols-[1.4fr_1fr]">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.16em] text-dawn">Your turn</p>
-          <h2 id="cta-h" className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-5xl">
-            Pick one project you keep thinking about.
-          </h2>
+          <SplitText as="h2" id="cta-h" className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-5xl" text="Pick one project you keep thinking about." />
           <p className="mt-4 max-w-lg text-[#c9cfd4]">Give it two minutes. You leave with a verdict, the reasons behind it, and the first thing to do tomorrow.</p>
-          <div className="mt-8 flex flex-wrap items-center gap-4" onMouseEnter={() => setGrow(true)} onMouseLeave={() => setGrow(false)}>
+          <div className="mt-8 max-w-sm">
+            <SlideToUnlock dark label="Slide to open a fresh plot" done="The soil is ready" onProgress={setPull} onUnlock={() => router.push("/bury")} />
+          </div>
+          <div className="mt-5 flex flex-wrap items-center gap-4" onMouseEnter={() => setGrow(true)} onMouseLeave={() => setGrow(false)}>
             <Link href="/bury" className="btn !rounded-lg border border-dawn bg-dawn !px-6 !py-3.5 text-base text-ink shadow-[0_0_40px_-6px_rgba(242,179,74,0.7)] hover:bg-[#f7c66d]" onFocus={() => setGrow(true)} onBlur={() => setGrow(false)}>
               Bury your first project
             </Link>
@@ -224,12 +230,12 @@ export function FinalCta() {
           </div>
         </div>
         <svg viewBox="0 0 200 180" className="mx-auto h-56 w-full max-w-xs" aria-hidden="true">
-          <motion.ellipse cx="100" cy="160" rx="80" ry="12" fill="#f2b34a" animate={{ opacity: grow ? 0.5 : 0.18 }} />
+          <motion.ellipse cx="100" cy="160" rx="80" ry="12" fill="#f2b34a" animate={{ opacity: grow ? 0.5 : 0.18 + pull * 0.4 }} />
           <path d="M20 160h160" stroke="#3b5a4a" strokeWidth="3" strokeLinecap="round" />
           <path d="M60 160V90a40 40 0 0 1 80 0v70" fill="#d9dce4" stroke="#8a8f9c" strokeWidth="2" />
           <rect x="82" y="100" width="36" height="4" rx="2" fill="#8a8f9c" />
           <rect x="88" y="112" width="24" height="4" rx="2" fill="#8a8f9c" />
-          <motion.g style={{ originX: "100px", originY: "52px" }} animate={{ scaleY: grow ? 1 : 0.15, opacity: grow ? 1 : 0.6 }} transition={{ type: "spring", stiffness: 140, damping: 11 }}>
+          <motion.g style={{ originX: "100px", originY: "52px" }} animate={{ scaleY: grow ? 1 : 0.15 + pull * 0.85, opacity: grow ? 1 : 0.6 + pull * 0.4 }} transition={{ type: "spring", stiffness: 140, damping: 11 }}>
             <path d="M100 52V14" stroke="#6dbf86" strokeWidth="3.5" strokeLinecap="round" />
             <path d="M100 32c-2-9-9-13-17-12 1 8 7 13 17 12z" fill="#6dbf86" />
             <path d="M100 25c1.5-10 9-15 18-14-1 9-7 15-18 14z" fill="#f2b34a" />
