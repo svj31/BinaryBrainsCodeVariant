@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState } from "react";
 import { create } from "zustand";
 import { AnimatePresence, motion } from "framer-motion";
+import { play } from "@/lib/sound";
 
 export interface CardData {
   kind: string;
@@ -59,10 +60,12 @@ async function dropOn(zoneId: string | null) {
   s.end();
   if (!d) return;
   if (z && accepts(z, d)) {
+    play("drop");
     s.say(`Dropped ${d.label} on ${z.label}.`);
     z.el.dispatchEvent(new CustomEvent("sw-dropped"));
     await z.onDrop(d);
   } else {
+    play("return");
     s.say(`${d.label} returned.`);
   }
 }
@@ -107,6 +110,7 @@ export function DragCard({
         if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
         started = true;
         useDnd.getState().start(data, "pointer");
+        play("pick");
         document.body.classList.add("sw-dragging");
       }
       ev.preventDefault();
@@ -147,6 +151,7 @@ export function DragCard({
     if ((e.key === " " || e.key === "Enter") && !lifted) {
       e.preventDefault();
       useDnd.getState().start(data, "keyboard");
+      play("pick");
       requestAnimationFrame(() => {
         const first = [...useDnd.getState().zones.values()].find((z) => accepts(z, data));
         first?.el.focus();
@@ -304,7 +309,7 @@ export function ActionZone({
       />
       {icon && (
         <motion.span
-          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-white"
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[var(--on-fill)]"
           style={{ background: tone }}
           animate={{ rotate: hot ? [0, -10, 10, 0] : 0, scale: hot ? 1.12 : 1 }}
           transition={{ duration: 0.5 }}
