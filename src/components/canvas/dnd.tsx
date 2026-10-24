@@ -100,6 +100,26 @@ export function DragCard({
     const sy = e.clientY;
     let started = false;
     let lastX = sx;
+    let py = sy;
+    let raf = 0;
+    // near the top or bottom edge, the page scrolls so far-away zones are reachable
+    const edge = () => {
+      const band = Math.min(110, innerHeight * 0.15);
+      const v = py < band ? -(band - py) / 6 : py > innerHeight - band ? (py - (innerHeight - band)) / 6 : 0;
+      if (v) {
+        scrollBy(0, v);
+        hitTest(lastX, py);
+      }
+      raf = requestAnimationFrame(edge);
+    };
+    const hitTest = (x: number, y: number) => {
+      let over: string | null = null;
+      for (const z of useDnd.getState().zones.values()) {
+        const zr = z.el.getBoundingClientRect();
+        if (x >= zr.left && x <= zr.right && y >= zr.top && y <= zr.bottom && accepts(z, data)) over = z.id;
+      }
+      if (useDnd.getState().over !== over) useDnd.getState().setOver(over);
+    };
     let lastY = sy;
     let lastT = performance.now();
     let vx = 0;
@@ -110,6 +130,7 @@ export function DragCard({
         if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
         started = true;
         useDnd.getState().start(data, "pointer");
+        raf = requestAnimationFrame(edge);
         play("pick");
         document.body.classList.add("sw-dragging");
       }
@@ -121,19 +142,16 @@ export function DragCard({
       vy = vy * 0.6 + ((ev.clientY - lastY) / dt) * 0.4 * 16;
       lastX = ev.clientX;
       lastY = ev.clientY;
+      py = ev.clientY;
       lastT = now;
       const tilt = Math.max(-16, Math.min(16, vx * 0.9));
       const ax = Math.min(0.35, Math.abs(vx) * 0.012);
       const ay = Math.min(0.35, Math.abs(vy) * 0.012);
       setGhost({ x: ev.clientX, y: ev.clientY, w: r.width, h: r.height, ox: sx - r.left, oy: sy - r.top, tilt, sx: 1 + ax - ay * 0.5, sy: 1 + ay - ax * 0.5 });
-      let over: string | null = null;
-      for (const z of useDnd.getState().zones.values()) {
-        const zr = z.el.getBoundingClientRect();
-        if (ev.clientX >= zr.left && ev.clientX <= zr.right && ev.clientY >= zr.top && ev.clientY <= zr.bottom && accepts(z, data)) over = z.id;
-      }
-      if (useDnd.getState().over !== over) useDnd.getState().setOver(over);
+      hitTest(ev.clientX, ev.clientY);
     };
     const up = () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);

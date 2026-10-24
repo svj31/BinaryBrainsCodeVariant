@@ -183,6 +183,20 @@ export function ProjectDetail({ id }: { id: string }) {
                   />
                 );
               })}
+              <ActionZone
+                id="compost-detail"
+                label="Compost"
+                hint="Remove it from the garden"
+                accepts={["project"]}
+                tone="var(--clay)"
+                icon={ZoneIcon.compost}
+                onDrop={() => {
+                  if (confirm(`Remove ${p.name} from your garden? This cannot be undone.`)) {
+                    remove(p.id);
+                    router.push("/garden");
+                  }
+                }}
+              />
             </div>
           </div>
           <div className="mt-6 border-t border-line-2 pt-6">
@@ -272,21 +286,7 @@ export function ProjectDetail({ id }: { id: string }) {
         <Link href="/garden" className="font-medium text-moss hover:underline">
           ← Back to the garden
         </Link>
-        <ActionZone
-          id="compost-detail"
-          label="Compost"
-          hint="Drop the headstone here to remove it"
-          accepts={["project"]}
-          tone="var(--clay)"
-          icon={ZoneIcon.compost}
-          compact
-          onDrop={() => {
-            if (confirm(`Remove ${p.name} from your garden? This cannot be undone.`)) {
-              remove(p.id);
-              router.push("/garden");
-            }
-          }}
-        />
+
       </div>
       <p className="mt-2 text-xs text-ink-3">Buried {ago(p.buriedOn)}.</p>
     </div>
