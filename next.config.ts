@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV !== "production";
+// Only upgrade to https when the site is actually served over https. On plain-http
+// localhost, Safari would otherwise upgrade script requests and fail to load them.
+const isHttps = (process.env.NEXT_PUBLIC_SITE_URL ?? "").startsWith("https://") || process.env.VERCEL === "1";
 const analyticsOrigin = "https://plausible.io";
 
 const csp = [
@@ -14,12 +17,14 @@ const csp = [
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-  isDev ? "" : "upgrade-insecure-requests",
+  !isDev && isHttps ? "upgrade-insecure-requests" : "",
 ]
   .filter(Boolean)
   .join("; ");
 
 const nextConfig: NextConfig = {
+  // test builds use their own folder so they never collide with a running `next dev`
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
   reactStrictMode: true,
   images: { formats: ["image/avif", "image/webp"] },
