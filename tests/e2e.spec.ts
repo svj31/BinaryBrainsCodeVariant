@@ -30,6 +30,10 @@ const noConsent = async (page: Page) =>
   page.addInitScript(() => {
     if (!sessionStorage.getItem("init")) {
       localStorage.setItem("secondwind-consent", "denied");
+      // the first-visit tour would cover the page; tests start as returning visitors
+      localStorage.setItem("sw-tour-home", "1");
+      localStorage.setItem("sw-tour-garden", "1");
+      localStorage.setItem("sw-flight-school", "1");
       sessionStorage.setItem("init", "1");
     }
   });
@@ -67,12 +71,10 @@ test.describe("SecondWind", () => {
     await page.goto("/garden");
     await expect(page.getByRole("button", { name: /Habit Hike, Resurrection Score/ })).toBeVisible();
     for (const v of ["Plots", "Ledger", "Timeline", "Garden"]) {
-      await page.getByRole("button", { name: /Change layout/ }).click();
       await page.getByRole("tab", { name: v }).click();
-      await expect(page.getByRole("button", { name: new RegExp(`Layout: ${v}`) })).toBeVisible();
+      await expect(page.getByRole("tab", { name: v })).toHaveAttribute("aria-selected", "true");
       await expect(page).toHaveURL(new RegExp(`view=${v.toLowerCase()}`));
     }
-    await page.getByRole("button", { name: /Change layout/ }).click();
     await page.getByRole("tab", { name: "Plots" }).click();
     await page.getByLabel("Search projects").fill("chess");
     await expect(page.locator("#garden-view li")).toHaveCount(1);
