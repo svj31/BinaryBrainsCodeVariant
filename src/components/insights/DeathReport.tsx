@@ -36,6 +36,143 @@ function Count({ to, suffix = "" }: { to: number; suffix?: string }) {
   return <motion.span ref={ref}>{txt}</motion.span>;
 }
 
+/** Builds an ECG trace: `beats` heartbeats spread over `alive` px, then a flat line to `w`. */
+function ecg(alive: number, w: number, beats: number, y = 22) {
+  let d = `M0 ${y}`;
+  const step = alive / Math.max(1, beats);
+  for (let i = 0; i < beats; i++) {
+    const x = i * step;
+    const k = Math.min(1, step / 34);
+    d += ` L${x + step * 0.35} ${y} l${3 * k} ${-3} l${3 * k} ${3} l${3 * k} 0 l${3 * k} ${-16} l${4 * k} ${26} l${3 * k} ${-12} l${4 * k} 0 q${4 * k} ${-5} ${8 * k} 0`;
+  }
+  return `${d} L${w} ${y}`;
+}
+
+/** A bedside monitor that beats, slows, then flatlines: how long your projects usually live. */
+function Monitor({ days }: { days: number }) {
+  const W = 320;
+  const path = ecg(220, W, 6);
+  return (
+    <div className="relative w-full max-w-sm rounded-xl border border-[#2c4252] bg-[#081219] p-4 font-mono text-[#7fd29a]" aria-hidden="true">
+      <div className="flex items-center justify-between text-[10px] tracking-[0.14em] uppercase">
+        <span>Vital signs</span>
+        <motion.span className="flex items-center gap-1.5 text-[#f07a5a]" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }}>
+          <span className="h-1.5 w-1.5 rounded-full bg-[#f07a5a]" /> flatline
+        </motion.span>
+      </div>
+      <svg viewBox={`0 0 ${W} 44`} className="mt-2 w-full overflow-visible">
+        {[11, 22, 33].map((y) => (
+          <line key={y} x1="0" x2={W} y1={y} y2={y} stroke="#12303a" />
+        ))}
+        <motion.path
+          d={path}
+          fill="none"
+          stroke="#7fd29a"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: [0, 1, 1] }}
+          transition={{ duration: 4, times: [0, 0.8, 1], repeat: Infinity, ease: "linear" }}
+          style={{ filter: "drop-shadow(0 0 4px #7fd29a)" }}
+        />
+        <motion.line x1="220" x2="220" y1="2" y2="42" stroke="#f07a5a" strokeDasharray="3 3" initial={{ opacity: 0 }} animate={{ opacity: [0, 0, 1, 1] }} transition={{ duration: 4, times: [0, 0.55, 0.6, 1], repeat: Infinity }} />
+      </svg>
+      <div className="mt-2 flex items-end justify-between">
+        <span className="text-[10px] text-[#9aa6ad]">average life</span>
+        <span className="font-display text-2xl text-[#f4f1e6]">
+          <Count to={days} /> <span className="text-sm text-[#9aa6ad]">days</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Each project drops into the column of what killed it, as a little headstone. */
+function Graveyard({ causes, all, focus, setFocus }: { causes: { c: Cause; n: number }[]; all: Assessed[]; focus: Cause | null; setFocus: (c: Cause | null) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const seen = useInView(ref, { once: true, amount: 0.3 });
+  return (
+    <div ref={ref} className="flex items-end gap-2 overflow-x-auto pb-1 sm:gap-3" role="group" aria-label="Causes of death">
+      {causes.map(({ c, n }, ci) => {
+        const on = focus === c;
+        const dim = focus && !on;
+        const projects = all.filter((x) => x.project.causes.includes(c));
+        return (
+          <button
+            key={c}
+            onClick={() => setFocus(on ? null : c)}
+            aria-pressed={on}
+            aria-label={`${CAUSES[c].label}: ${n} projects`}
+            className={`group flex min-w-[64px] flex-1 flex-col items-center rounded-xl px-1 pt-2 pb-2 transition-[background,opacity] ${on ? "bg-dawn-soft" : "hover:bg-paper"} ${dim ? "opacity-35" : ""}`}
+          >
+            <span className="font-display text-lg font-semibold">{n}</span>
+            <span className="mt-1 flex min-h-[96px] flex-col-reverse items-center gap-0.5">
+              {projects.map((x, i) => (
+                <motion.svg
+                  key={x.project.id}
+                  viewBox="0 0 20 22"
+                  className="h-8 w-7"
+                  initial={{ y: -160, opacity: 0, rotate: i % 2 ? 14 : -14 }}
+                  animate={seen ? { y: 0, opacity: 1, rotate: 0 } : undefined}
+                  transition={{ type: "spring", stiffness: 260, damping: 13, delay: 0.15 + ci * 0.12 + i * 0.09 }}
+                >
+                  <title>{x.project.name}</title>
+                  <path d="M3 21V9a7 7 0 0 1 14 0v12z" fill={VERDICTS[x.a.verdict].color} stroke="var(--ink)" strokeOpacity="0.25" />
+                  <path d="M7 10h6M8 13h4" stroke="var(--card)" strokeWidth="1.3" strokeLinecap="round" />
+                </motion.svg>
+              ))}
+            </span>
+            <span className="mt-2 h-[3px] w-full rounded-full bg-[#8a6f4e]/60" aria-hidden="true" />
+            <span className={`mt-2 h-[3.6em] text-center text-[11px] leading-tight ${on ? "font-semibold text-ink" : "text-ink-2"}`}>{CAUSES[c].label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Lifelines: an ECG per project, drawn as you scroll, that flatlines when the project stopped. */
+function Lifelines({ all, maxLife, inFocus }: { all: Assessed[]; maxLife: number; inFocus: (x: Assessed) => boolean }) {
+  const rows = [...all].sort((a, b) => daysBetween(b.project.startedOn, b.project.buriedOn) - daysBetween(a.project.startedOn, a.project.buriedOn));
+  const W = 600;
+  return (
+    <ul className="space-y-1">
+      {rows.map((x, i) => {
+        const days = daysBetween(x.project.startedOn, x.project.buriedOn);
+        const alive = Math.max(40, (days / maxLife) * (W - 40));
+        const color = VERDICTS[x.a.verdict].color;
+        const on = inFocus(x);
+        return (
+          <motion.li key={x.project.id} animate={{ opacity: on ? 1 : 0.2 }} className="group grid grid-cols-[110px_1fr] items-center gap-3 sm:grid-cols-[150px_1fr_120px]">
+            <Link href={`/garden/${x.project.id}`} className="truncate text-sm font-medium hover:underline">
+              {x.project.name}
+            </Link>
+            <svg viewBox={`0 0 ${W} 44`} className="h-9 w-full overflow-visible" role="img" aria-label={`${x.project.name} lived ${days} days`}>
+              <motion.path
+                d={ecg(alive, alive + 10, Math.max(2, Math.round(x.project.inputs.completion / 12)))}
+                fill="none"
+                stroke={color}
+                strokeWidth="1.8"
+                strokeLinejoin="round"
+                initial={{ pathLength: 0 }}
+                whileInView={{ pathLength: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.4, delay: Math.min(i * 0.08, 0.8), ease: "easeInOut" }}
+              />
+              <motion.g initial={{ opacity: 0, y: 6 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: Math.min(i * 0.08, 0.8) + 1.3 }}>
+                <path d={`M${alive + 12} 30V20a6 6 0 0 1 12 0v10z`} fill="var(--stone-light)" stroke={color} strokeWidth="1.4" />
+              </motion.g>
+            </svg>
+            <span className="hidden text-right font-mono text-xs text-ink-3 sm:block">
+              {days}d · {x.project.inputs.completion}% built
+            </span>
+          </motion.li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function Card({ title, sub, children, className = "", delay = 0 }: { title: string; sub?: string; children: React.ReactNode; className?: string; delay?: number }) {
   return (
     <Reveal delay={delay} className={`rounded-xl border border-line bg-card p-5 sm:p-6 ${className}`}>
@@ -50,7 +187,6 @@ export function DeathReport() {
   const all = useAssessed();
   const [focus, setFocus] = useState<Cause | null>(null);
   const [hoverV, setHoverV] = useState<Verdict | null>(null);
-  const [tip, setTip] = useState<Assessed | null>(null);
 
   const s = useMemo(() => {
     const causes = CAUSE_KEYS.map((c) => ({ c, n: all.filter((x) => x.project.causes.includes(c)).length })).filter((x) => x.n).sort((a, b) => b.n - a.n);
@@ -120,15 +256,18 @@ export function DeathReport() {
       <p className="mt-2 max-w-2xl text-ink-2">Built live from the {total} projects in your garden. Click a cause to trace it through every chart.</p>
 
       {top && (
-        <Reveal className="relative mt-8 overflow-hidden rounded-xl bg-ink p-6 text-paper sm:p-8">
+        <Reveal className="relative mt-8 grid items-center gap-6 overflow-hidden rounded-2xl bg-[#13222e] p-6 text-[#f4f1e6] sm:p-8 lg:grid-cols-[1fr_auto]">
           <motion.div className="absolute -right-20 -bottom-24 h-72 w-72 rounded-full bg-dawn/30 blur-3xl" animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 6, repeat: Infinity }} aria-hidden="true" />
-          <p className="relative font-mono text-xs uppercase tracking-[0.14em] text-[#cfc9bc]">Your pattern</p>
+          <div className="relative">
+          <p className="font-mono text-xs uppercase tracking-[0.14em] text-[#cfc9bc]">Your pattern</p>
           <p className="relative mt-3 max-w-3xl font-display text-2xl leading-snug sm:text-3xl">
             {CAUSES[top.c].label} ended {top.n} of your {total} projects. They usually stop after about {Math.round(s.avgLife / 7)} weeks, with {s.avgBuilt}% of the plan built.
           </p>
           <p className="relative mt-4 max-w-2xl text-[#dcd6ca]">
-            <span className="font-semibold text-paper">Next time:</span> {ADVICE[top.c]}
+            <span className="font-semibold text-[#f2b34a]">Next time:</span> {ADVICE[top.c]}
           </p>
+          </div>
+          <Monitor days={s.avgLife} />
         </Reveal>
       )}
 
@@ -141,44 +280,30 @@ export function DeathReport() {
           ["Back in progress", s.back, ""],
           ["Parts salvaged", s.parts, ""],
         ].map(([k, v, suf], i) => (
-          <Reveal key={k as string} delay={i * 0.05} className="rounded-xl border border-line bg-card p-4">
-            <dt className="text-sm text-ink-2">{k}</dt>
+          <motion.div
+            key={k as string}
+            className="rounded-xl border border-line bg-card p-4"
+            style={{ transformPerspective: 600 }}
+            initial={{ rotateX: -80, opacity: 0, y: 20 }}
+            whileInView={{ rotateX: 0, opacity: 1, y: 0 }}
+            whileHover={{ y: -4 }}
+            viewport={{ once: true }}
+            transition={{ type: "spring", stiffness: 180, damping: 16, delay: i * 0.08 }}
+          >
+            <dt className="flex items-center gap-2 text-sm text-ink-2">
+              <span aria-hidden="true">{["🪦", "⏳", "🧱", "✨", "🌱", "🧰"][i]}</span>
+              {k}
+            </dt>
             <dd className="mt-1 font-display text-3xl font-semibold">
               <Count to={v as number} suffix={suf as string} />
             </dd>
-          </Reveal>
+          </motion.div>
         ))}
       </dl>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card title="Causes of death" sub="Click one to focus. A project can have more than one cause.">
-          <ul className="space-y-2">
-            {s.causes.map(({ c, n }, i) => {
-              const on = focus === c;
-              return (
-                <li key={c}>
-                  <button
-                    onClick={() => setFocus(on ? null : c)}
-                    aria-pressed={on}
-                    className={`grid w-full grid-cols-[150px_1fr_28px] items-center gap-3 rounded-md px-2 py-1.5 text-left text-sm transition-colors sm:grid-cols-[180px_1fr_28px] ${on ? "bg-dawn-soft" : "hover:bg-paper"}`}
-                  >
-                    <span className={`truncate ${on ? "font-semibold text-ink" : "text-ink-2"}`}>{CAUSES[c].label}</span>
-                    <span className="h-5 overflow-hidden rounded-[3px] bg-stone-light/70" aria-hidden="true">
-                      <motion.span
-                        className="block h-full rounded-[3px]"
-                        style={{ background: on || (!focus && i === 0) ? "var(--clay)" : "var(--ink-3)" }}
-                        initial={{ width: 0 }}
-                        whileInView={{ width: `${(n / s.causes[0].n) * 100}%` }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.8, delay: i * 0.05, ease }}
-                      />
-                    </span>
-                    <span className="text-right font-mono">{n}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+        <Card title="How they died" sub="Each headstone is one project, coloured by its verdict. Tap a cause to trace it through every chart below.">
+          <Graveyard causes={s.causes} all={all} focus={focus} setFocus={setFocus} />
           <AnimatePresence>
             {focus && (
               <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mt-3 rounded-md bg-paper p-3 text-sm text-ink-2">
@@ -232,60 +357,8 @@ export function DeathReport() {
           </div>
         </Card>
 
-        <Card title="Lifespan vs work built" sub="Each dot is a project. Bigger means a higher score. Hover for details." className="lg:col-span-2">
-          <div className="relative">
-            <svg viewBox="0 0 640 260" className="w-full" role="img" aria-label="Scatter of project lifespan in days against percentage built">
-              {[0, 25, 50, 75, 100].map((y) => (
-                <g key={y}>
-                  <line x1="40" x2="630" y1={230 - y * 2.1} y2={230 - y * 2.1} stroke="var(--line-2)" />
-                  <text x="32" y={234 - y * 2.1} textAnchor="end" fontSize="10" fill="var(--ink-3)">
-                    {y}%
-                  </text>
-                </g>
-              ))}
-              <text x="335" y="256" textAnchor="middle" fontSize="10" fill="var(--ink-3)">
-                Days alive before burial (max {s.maxLife})
-              </text>
-              {all.map((x, i) => {
-                const cx = 40 + (daysBetween(x.project.startedOn, x.project.buriedOn) / s.maxLife) * 580;
-                const cy = 230 - x.project.inputs.completion * 2.1;
-                const on = inFocus(x);
-                return (
-                  <motion.circle
-                    key={x.project.id}
-                    cx={cx}
-                    cy={cy}
-                    fill={VERDICTS[x.a.verdict].color}
-                    stroke="var(--card)"
-                    strokeWidth="2"
-                    initial={{ r: 0 }}
-                    whileInView={{ r: 5 + x.a.score / 10 }}
-                    viewport={{ once: true }}
-                    animate={{ opacity: on ? 0.9 : 0.12 }}
-                    transition={{ duration: 0.6, delay: i * 0.04, ease }}
-                    onMouseEnter={() => setTip(x)}
-                    onMouseLeave={() => setTip(null)}
-                    style={{ cursor: "pointer" }}
-                  />
-                );
-              })}
-            </svg>
-            <AnimatePresence>
-              {tip && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="pointer-events-none absolute top-2 right-2 rounded-lg bg-ink px-3 py-2 text-sm text-paper shadow-lg"
-                >
-                  <p className="font-semibold">{tip.project.name}</p>
-                  <p className="text-xs text-[#cfc9bc]">
-                    {daysBetween(tip.project.startedOn, tip.project.buriedOn)} days · {tip.project.inputs.completion}% built · score {tip.a.score} · {VERDICTS[tip.a.verdict].label}
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+        <Card title="Lifelines" sub="Each line is a project's heartbeat: longer means it lived longer, more beats means more of it got built. It flatlines when you stopped." className="lg:col-span-2">
+          <Lifelines all={all} maxLife={s.maxLife} inFocus={inFocus} />
         </Card>
 
         <Card title="Score distribution" sub="How many projects sit in each band of the Resurrection Score.">
