@@ -7,6 +7,7 @@ import { Analytics } from "@/components/layout/Analytics";
 import { StoreHydrator } from "@/components/layout/StoreHydrator";
 import { Cursor } from "@/components/layout/Cursor";
 import { Ripple } from "@/components/layout/Ripple";
+import { RitualOverlay } from "@/components/magic/Ritual";
 import { MotionProvider } from "@/components/layout/MotionProvider";
 import { SITE } from "@/lib/site";
 import "./globals.css";
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </MotionProvider>
         <Cursor />
         <Ripple />
+        <RitualOverlay />
         <StoreHydrator />
         <Analytics />
       </body>
