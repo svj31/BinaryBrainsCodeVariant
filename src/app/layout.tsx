@@ -12,6 +12,8 @@ import { DndLayer } from "@/components/canvas/dnd";
 import { BootDone, RouteProgress } from "@/components/layout/Loaders";
 import { MotionProvider } from "@/components/layout/MotionProvider";
 import { CommandBox } from "@/components/layout/CommandBox";
+import { SoundLayer } from "@/components/layout/SoundLayer";
+import { Tour } from "@/components/layout/Tour";
 import { ScrollWisp } from "@/components/motion/Scroll3D";
 import { SITE } from "@/lib/site";
 import "./globals.css";
@@ -56,41 +58,27 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body className="min-h-dvh overflow-x-clip">
         <div id="sw-boot" aria-hidden="true">
-          <div className="sw-stage">
-            <div className="sw-stage-stars" />
-            <div className="sw-boot-moon" />
-            <div className="sw-runes" />
-            <div className="sw-cast" />
-            <div className="sw-witch">
-              <svg viewBox="0 0 160 120">
-                {/* broom */}
-                <path d="M10 82 L118 64" stroke="#8a6f4e" strokeWidth="4" strokeLinecap="round" />
-                <path d="M114 58 L150 50 L152 74 L116 70 Z" fill="#c99a52" stroke="#8a6f4e" strokeWidth="1.5" />
-                <path d="M122 60l26-4M122 66l28 0M120 70l26 4" stroke="#8a6f4e" strokeWidth="1" />
-                {/* cape */}
-                <path className="sw-cape" d="M66 40 C50 56 46 72 38 86 L96 78 C88 64 82 52 78 40 Z" fill="#1b2a35" stroke="#2c4252" strokeWidth="1.5" />
-                {/* head and hat */}
-                <circle cx="72" cy="36" r="9" fill="#0d1820" />
-                <circle cx="69" cy="35" r="1.6" fill="#f2b34a" />
-                <circle cx="75" cy="35" r="1.6" fill="#f2b34a" />
-                <path d="M56 30 L90 28 L80 24 L70 2 L64 26 Z" fill="#1b2a35" stroke="#2c4252" strokeWidth="1.5" />
-                <path d="M64 26 L80 24" stroke="#f2b34a" strokeWidth="2" />
-                {/* wand arm */}
-                <path d="M78 52 L102 40" stroke="#2c4252" strokeWidth="5" strokeLinecap="round" />
-                <path d="M102 40 L118 26" stroke="#e6e0d4" strokeWidth="2" strokeLinecap="round" />
-                <circle className="sw-wandtip" cx="119" cy="25" r="4" fill="#ffe2a8" />
+          <div className="sw-sky">
+            <div className="sw-moon" />
+            <div className="sw-flight">
+              <div className="sw-trail" />
+              <svg className="sw-witch" viewBox="0 0 120 60">
+                {/* silhouette: broom, cape, hat */}
+                <path d="M4 44 L92 34" stroke="#05090d" strokeWidth="2.6" strokeLinecap="round" />
+                <path d="M88 31 L116 26 L117 42 L90 39 Z" fill="#05090d" />
+                <path d="M46 20 C38 30 32 40 22 46 L66 40 C60 32 56 26 54 20 Z" fill="#05090d" />
+                <circle cx="51" cy="17" r="5.5" fill="#05090d" />
+                <path d="M40 14 L64 12 L56 9 L49 -6 L46 11 Z" fill="#05090d" />
+                <path d="M55 26 L74 18 L82 9" stroke="#05090d" strokeWidth="2.4" strokeLinecap="round" fill="none" />
               </svg>
             </div>
-            <div className="sw-valance" />
-            <div className="sw-curtain sw-curtain-l" />
-            <div className="sw-curtain sw-curtain-r" />
           </div>
-          <div className="sw-boot-copy">
+          <div className="sw-curtain sw-curtain-l" />
+          <div className="sw-curtain sw-curtain-r" />
+          <div className="sw-title">
             <b>SecondWind</b>
-            <p>The keeper is waking the garden</p>
-            <div className="sw-boot-bar">
-              <i />
-            </div>
+            <span>Where unfinished projects rest</span>
+            <i />
           </div>
         </div>
         <MotionProvider>
@@ -101,6 +89,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </MotionProvider>
         <ScrollWisp />
         <CommandBox />
+        <SoundLayer />
+        <Tour />
         <Cursor />
         <Ripple />
         <RitualOverlay />
