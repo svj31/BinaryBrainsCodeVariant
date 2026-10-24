@@ -81,7 +81,7 @@ export function ProjectDetail({ id }: { id: string }) {
         transition={{ duration: 0.45 }}
         className="mt-5 grid items-start gap-6 lg:grid-cols-[1fr_380px]"
       >
-        <div className="relative overflow-hidden rounded-t-[140px] rounded-b-lg border border-line bg-[linear-gradient(#ebe5d8,#e2dbcc)] px-6 pt-14 pb-8 text-center sm:px-12">
+        <div className="relative overflow-hidden rounded-t-[140px] rounded-b-lg border border-line bg-[linear-gradient(var(--paper-2),var(--stone-light))] px-6 pt-14 pb-8 text-center sm:px-12">
           <div className="flex justify-center gap-2">
             <StatusTag status={p.status} />
           </div>

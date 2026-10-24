@@ -264,7 +264,7 @@ export function TimelineView({ items, selectedId, onSelect }: ViewProps) {
               animate={{ scaleY: 1 }}
               transition={{ duration: 0.9, ease }}
             />
-            <span className="absolute -top-7 -translate-x-1/2 rounded bg-dawn px-1.5 font-mono text-[10px] text-ink" style={{ left: `${pos(Date.now())}%` }}>
+            <span className="absolute -top-7 -translate-x-1/2 rounded bg-dawn px-1.5 font-mono text-[10px] text-[#1e2721]" style={{ left: `${pos(Date.now())}%` }}>
               today
             </span>
           </div>
