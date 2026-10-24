@@ -14,7 +14,7 @@ import { SlideToUnlock } from "@/components/ui/SlideToUnlock";
 import { GlassSearch } from "@/components/ui/GlassSearch";
 import { SplitText } from "@/components/motion/Scroll3D";
 import { LedgerView, PlotsView, TimelineView } from "./Views";
-import { QuickPanel } from "./QuickPanel";
+import { QuickPanel, QuickStrip } from "./QuickPanel";
 import { useRitual } from "@/components/magic/Ritual";
 import { ViewSpell } from "@/components/magic/ViewSpell";
 import { ActionZone, DragCard, ZoneIcon, useDnd } from "@/components/canvas/dnd";
@@ -104,142 +104,169 @@ export function GardenApp() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-8 pb-10 sm:px-6">
+      {/* 1. Orient: what this page is and what to do here */}
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+        <div className="max-w-2xl">
           <p className="eyebrow">Your graveyard</p>
           <SplitText as="h1" className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl" text="The Infinite Garden" />
-          <p className="mt-1 text-ink-2">
-            {all.length} projects resting. {counts.revive} ready to revive.
-          </p>
+          <p className="mt-2 text-ink-2">Every stone is an unfinished project. Pick one to see its verdict, then drag its card onto an action.</p>
         </div>
-        <ViewSwitcher view={view} onChange={changeView} />
+        <div className="flex gap-2 text-sm" aria-label="Garden summary">
+          <span className="rounded-full border border-line bg-card px-3 py-1.5">
+            <b className="font-mono">{all.length}</b> <span className="text-ink-2">resting</span>
+          </span>
+          <span className="rounded-full border border-moss/40 bg-moss-soft px-3 py-1.5 text-moss">
+            <b className="font-mono">{counts.revive}</b> ready to revive
+          </span>
+        </div>
       </div>
 
-      <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <GlassSearch id="garden-search" label="Search projects" className="lg:w-80" placeholder="Search names, tags, stack" value={query} onChange={setQuery} />
-        <div className="flex gap-2 overflow-x-auto pb-1 lg:pb-0" role="group" aria-label="Filter by verdict">
-          {(["all", "high", ...VERDICT_ORDER] as Filter[]).map((f, i) => {
+      {/* 2. Find: view, search and filters live together in one toolbar */}
+      <div className="mt-6 flex flex-wrap items-center gap-2.5 rounded-2xl border border-line bg-paper-2/60 p-2.5" data-tour="toolbar">
+        <div className="shrink-0 max-sm:w-full">
+          <ViewSwitcher view={view} onChange={changeView} />
+        </div>
+        <GlassSearch id="garden-search" label="Search projects" className="min-w-[220px] flex-1 2xl:max-w-xs" placeholder="Search names, tags, stack" value={query} onChange={setQuery} />
+        <div
+          className="flex w-full min-w-0 gap-1.5 overflow-x-auto 2xl:w-auto 2xl:flex-1 [mask-image:linear-gradient(90deg,#000_92%,transparent)] [scrollbar-width:none]"
+          role="group"
+          aria-label="Filter by verdict"
+        >
+          {(["all", "high", ...VERDICT_ORDER] as Filter[]).map((f) => {
             const active = filter === f;
             const label = f === "all" ? "All" : f === "high" ? "High potential" : VERDICTS[f].label;
             return (
-              <motion.button
-                initial={{ opacity: 0, y: 20, rotateX: -60 }}
-                animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                transition={{ delay: 0.3 + i * 0.06 }}
-                whileHover={{ y: -2, scale: 1.04 }}
-                whileTap={{ scale: 0.94 }}
+              <button
                 key={f}
                 onClick={() => setFilter(f)}
                 aria-pressed={active}
-                className={`shrink-0 rounded-md border px-3 py-1.5 text-sm transition-colors ${
-                  active ? "border-ink bg-ink text-paper" : "border-line bg-card text-ink-2 hover:border-ink-3"
+                className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors ${
+                  active ? "border-ink bg-ink text-paper" : "border-line bg-card text-ink-2 hover:border-ink-3 hover:text-ink"
                 }`}
               >
+                {f !== "all" && f !== "high" && <span className="h-2 w-2 rounded-full" style={{ background: VERDICTS[f].color }} aria-hidden="true" />}
                 {label} <span className={`font-mono text-xs ${active ? "text-paper/75" : "text-ink-3"}`}>{counts[f]}</span>
-              </motion.button>
+              </button>
             );
           })}
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div id="garden-view" role="tabpanel" data-spell={spell ? "on" : undefined} aria-label={`${view} view`} className="min-w-0">
+      <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        {/* 3. Explore */}
+        <div id="garden-view" role="tabpanel" data-spell={spell ? "on" : undefined} aria-labelledby={`tab-${view}`} className="min-w-0 self-start" data-tour="scene">
           <div className="relative">
-          <ViewSpell spell={spell} />
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={view}
-              className="relative overflow-x-clip"
-              initial={{ opacity: 0, clipPath: "circle(0% at 92% 0%)", scale: 0.98 }}
-              animate={{ opacity: 1, clipPath: "circle(160% at 92% 0%)", scale: 1, transitionEnd: { clipPath: "none" } }}
-              exit={{ opacity: 0, scale: 0.97, filter: "blur(6px)", transition: { duration: 0.22 } }}
-              transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
-            >
-
-              {items.length === 0 ? (
-                <EmptyState query={query} onClear={() => (setQuery(""), setFilter("all"))} />
-              ) : view === "garden" ? (
-                <div className="relative h-[520px] overflow-hidden rounded-2xl border border-[#1d2f3a] bg-[#060d14] shadow-[0_40px_100px_-40px_rgba(13,27,38,0.9)] sm:h-[68vh] sm:min-h-[560px]">
-                  <SpaceGarden stones={stones} selectedId={selectedId} onSelect={select} className="h-full w-full" />
-                  <p className="pointer-events-none absolute bottom-3 left-3 max-w-[90%] rounded-full border border-white/10 bg-[#0d1b26]/70 px-3 py-1 text-xs text-[#d9dce4] backdrop-blur-md">
-                    Drag to look · <kbd className="font-mono">W A S D</kbd> to fly · <kbd className="font-mono">Q E</kbd> down/up · scroll to thrust · Shift to boost · click a stone to glide to it
-                  </p>
-                </div>
-              ) : view === "plots" ? (
-                <PlotsView items={items} selectedId={selectedId} onSelect={select} />
-              ) : view === "ledger" ? (
-                <LedgerView items={items} selectedId={selectedId} onSelect={select} />
-              ) : (
-                <TimelineView items={items} selectedId={selectedId} onSelect={select} />
-              )}
-            </motion.div>
-          </AnimatePresence>
+            <ViewSpell spell={spell} />
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={view}
+                className="relative overflow-x-clip"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8, transition: { duration: 0.18 } }}
+                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {items.length === 0 ? (
+                  <EmptyState query={query} onClear={() => (setQuery(""), setFilter("all"))} />
+                ) : view === "garden" ? (
+                  <div className="relative h-[520px] overflow-hidden rounded-2xl border border-[#1d2f3a] bg-[#060d14] sm:h-[clamp(540px,calc(100svh-120px),740px)]">
+                    <SpaceGarden stones={stones} selectedId={selectedId} onSelect={select} className="h-full w-full" />
+                  </div>
+                ) : view === "plots" ? (
+                  <PlotsView items={items} selectedId={selectedId} onSelect={select} />
+                ) : view === "ledger" ? (
+                  <LedgerView items={items} selectedId={selectedId} onSelect={select} />
+                ) : (
+                  <TimelineView items={items} selectedId={selectedId} onSelect={select} />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
 
-        {selected && (
-          <section aria-label="Action dock" className="lg:order-first lg:col-span-2">
-            <div className="grid items-stretch gap-2 rounded-xl border border-line bg-paper-2/70 p-3 sm:grid-cols-[1.2fr_1fr_1fr_1fr]">
-              <DragCard data={{ kind: "project", id: selected.project.id, label: selected.project.name }} hint="Drag into Open, Nudge or Compost">
-                <div className="flex h-full items-center gap-3 rounded-lg border border-line bg-card px-3 py-2">
-                  <Headstone score={selected.a.score} sprout={selected.a.score >= 55} className="h-10 w-8 shrink-0" />
-                  <span className="min-w-0">
-                    <span className="block truncate font-semibold">{selected.project.name}</span>
-                    <span className="text-xs text-ink-3">drag this card, or any plot card</span>
-                  </span>
+        {/* 4. Act: the selected card sits right next to the places it can go */}
+        <aside aria-label="Selected project" className="min-w-0">
+          <div className="space-y-4 lg:sticky lg:top-24">
+            {selected ? (
+              <section aria-label="Action dock" className="rounded-2xl border border-line bg-card p-4 shadow-[0_18px_40px_-30px_rgba(30,39,33,0.5)]" data-tour="dock">
+                <p className="flex items-center gap-2 text-xs font-semibold text-ink-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[10px] text-paper">1</span>
+                  Selected project
+                </p>
+                <DragCard className="mt-2" data={{ kind: "project", id: selected.project.id, label: selected.project.name }} hint="Drag into Open, Nudge or Compost">
+                  <div className="flex items-center gap-3 rounded-xl border border-line bg-paper px-3 py-2.5">
+                    <Headstone score={selected.a.score} sprout={selected.a.score >= 55} className="h-10 w-8 shrink-0" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold">{selected.project.name}</span>
+                      <span className="text-xs text-ink-3">
+                        Score {selected.a.score} · {VERDICTS[selected.a.verdict].label}
+                      </span>
+                    </span>
+                    <span className="text-lg text-ink-3" aria-hidden="true">
+                      ⠿
+                    </span>
+                  </div>
+                </DragCard>
+                <p className="mt-4 flex items-center gap-2 text-xs font-semibold text-ink-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[10px] text-paper">2</span>
+                  Drag it onto an action
+                </p>
+                <div className="mt-2 grid gap-2">
+                  <ActionZone id="dock-open" label="Open verdict" accepts={["project"]} icon={ZoneIcon.open} compact onDrop={(c) => router.push(`/garden/${c.id}`)} />
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                    <ActionZone
+                      id="dock-nudge"
+                      label="Nudge in 2 weeks"
+                      accepts={["project"]}
+                      icon={ZoneIcon.bell}
+                      tone="var(--dawn)"
+                      compact
+                      onDrop={(c) => {
+                        const d = new Date();
+                        d.setDate(d.getDate() + 14);
+                        update(c.id, { remindOn: d.toISOString().slice(0, 10) });
+                        useDnd.getState().say(`Nudge set for ${c.label}.`);
+                        setToast(`${c.label}: nudge set for 2 weeks from today`);
+                      }}
+                    />
+                    <ActionZone
+                      id="dock-compost"
+                      label="Compost"
+                      accepts={["project"]}
+                      icon={ZoneIcon.compost}
+                      tone="var(--clay)"
+                      compact
+                      onDrop={(c) => setPending({ kind: "compost", id: c.id, label: c.label })}
+                    />
+                  </div>
                 </div>
-              </DragCard>
-              <ActionZone id="dock-open" label="Open verdict" accepts={["project"]} icon={ZoneIcon.open} compact onDrop={(c) => router.push(`/garden/${c.id}`)} />
-              <ActionZone
-                id="dock-nudge"
-                label="Nudge in 2 weeks"
-                accepts={["project"]}
-                icon={ZoneIcon.bell}
-                tone="var(--dawn)"
-                compact
-                onDrop={(c) => {
-                  const d = new Date();
-                  d.setDate(d.getDate() + 14);
-                  update(c.id, { remindOn: d.toISOString().slice(0, 10) });
-                  useDnd.getState().say(`Nudge set for ${c.label}.`);
-                  setToast(`${c.label}: nudge set for 2 weeks from today`);
-                }}
-              />
-              <ActionZone
-                id="dock-compost"
-                label="Compost"
-                accepts={["project"]}
-                icon={ZoneIcon.compost}
-                tone="var(--clay)"
-                compact
-                onDrop={(c) => setPending({ kind: "compost", id: c.id, label: c.label })}
-              />
-            </div>
-            <AnimatePresence>
-              {toast && (
-                <motion.p role="status" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-2 text-sm font-medium text-moss">
-                  {toast}
-                </motion.p>
-              )}
-            </AnimatePresence>
-          </section>
-        )}
-
-        <aside className="hidden lg:block" aria-label="Selected project">
-          <div className="sticky top-24">
-            <AnimatePresence mode="wait">{selected && <QuickPanel key={selected.project.id} item={selected} />}</AnimatePresence>
+                <AnimatePresence>
+                  {toast && (
+                    <motion.p role="status" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-3 rounded-lg bg-moss-soft px-3 py-2 text-sm font-medium text-moss">
+                      ✓ {toast}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </section>
+            ) : null}
           </div>
         </aside>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-line px-4 py-3 text-sm text-ink-2">
-        <p>
-          {hydrated ? "Sample projects are loaded so you can explore. Your own burials are saved in this browser." : "Loading your garden."}
+      {/* 5. Understand: full details of the selected project, laid out horizontally under the garden */}
+      <section aria-label="Selected project details" className="mt-6 hidden lg:block">
+        <AnimatePresence mode="wait">{selected && <QuickStrip key={selected.project.id} item={selected} />}</AnimatePresence>
+      </section>
+
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-line px-4 py-3 text-sm text-ink-2">
+        <p className="max-w-md">
+          {hydrated ? "These are sample projects so you can explore. Projects you bury are saved only in this browser." : "Loading your garden."}
         </p>
         <div className="flex items-center gap-2">
           <DragCard data={{ kind: "seeds", id: "seeds", label: "Sample seed packet" }} hint="Drag into Replant to reset to sample data">
             <span className="block rounded-md border border-line bg-card px-3 py-1.5 text-sm font-medium">Sample seeds</span>
           </DragCard>
+          <span className="text-ink-3" aria-hidden="true">→</span>
           <ActionZone
             id="replant"
             label="Replant"
