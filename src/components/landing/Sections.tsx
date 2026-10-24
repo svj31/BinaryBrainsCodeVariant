@@ -145,14 +145,14 @@ export function WhoFor() {
         {PERSONAS.map((p) => {
           const on = p.id === pid;
           return (
-            <button key={p.id} role="tab" aria-selected={on} onClick={() => setPid(p.id)} className={`relative flex items-center gap-3 rounded-xl border p-4 text-left ${on ? "border-transparent text-paper" : "border-line bg-card hover:border-ink-3"}`}>
+            <button key={p.id} role="tab" aria-selected={on} onClick={() => setPid(p.id)} className={`relative flex items-center gap-3 rounded-xl border p-4 text-left ${on ? "border-transparent text-[var(--on-fill)]" : "border-line bg-card hover:border-ink-3"}`}>
               {on && <motion.span layoutId="persona-bg" className="absolute inset-0 rounded-xl bg-moss" transition={{ type: "spring", stiffness: 400, damping: 34 }} />}
               <span className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] ${on ? "bg-white/15" : "bg-moss-soft text-moss"}`}>
                 <PersonaIcon id={p.id} />
               </span>
               <span className="relative">
                 <span className="block font-semibold">{p.label}</span>
-                <span className={`block text-sm ${on ? "text-white/80" : "text-ink-2"}`}>{p.line}</span>
+                <span className={`block text-sm ${on ? "text-[var(--on-fill)] opacity-80" : "text-ink-2"}`}>{p.line}</span>
               </span>
             </button>
           );
@@ -171,7 +171,7 @@ export function WhoFor() {
                 transition={{ type: "spring", stiffness: 140, damping: 14, delay: i * 0.1 }}
                 className="flex flex-col items-center text-center"
               >
-                <span className="mb-2 rounded-[6px] px-2 py-0.5 font-mono text-xs" style={{ background: VERDICTS[a.verdict].color, color: "#fff" }}>
+                <span className="mb-2 rounded-[6px] px-2 py-0.5 font-mono text-xs" style={{ background: VERDICTS[a.verdict].color, color: "var(--on-fill)" }}>
                   {a.score}
                 </span>
                 <div className="relative">
@@ -192,15 +192,9 @@ export function WhoFor() {
   );
 }
 
+/** Starfield painted as one layer with a single twinkle, instead of dozens of animated dots. */
 function Stars() {
-  const stars = useMemo(() => Array.from({ length: 28 }, (_, i) => ({ x: (i * 37) % 100, y: (i * 53) % 60, d: (i % 7) * 0.4 })), []);
-  return (
-    <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-      {stars.map((s, i) => (
-        <motion.span key={i} className="absolute h-[2px] w-[2px] rounded-full bg-white" style={{ left: `${s.x}%`, top: `${s.y}%` }} animate={{ opacity: [0.2, 1, 0.2] }} transition={{ duration: 2.5, repeat: Infinity, delay: s.d }} />
-      ))}
-    </div>
-  );
+  return <div className="sw-stars pointer-events-none absolute inset-0" aria-hidden="true" />;
 }
 
 /* ---------- Final call to action ---------- */
@@ -221,7 +215,7 @@ export function FinalCta() {
             <SlideToUnlock dark label="Slide to open a fresh plot" done="The soil is ready" onProgress={setPull} onUnlock={() => router.push("/bury")} />
           </div>
           <div className="mt-5 flex flex-wrap items-center gap-4" onMouseEnter={() => setGrow(true)} onMouseLeave={() => setGrow(false)}>
-            <Link href="/bury" className="btn !rounded-lg border border-dawn bg-dawn !px-6 !py-3.5 text-base text-ink shadow-[0_0_40px_-6px_rgba(242,179,74,0.7)] hover:bg-[#f7c66d]" onFocus={() => setGrow(true)} onBlur={() => setGrow(false)}>
+            <Link href="/bury" className="btn !rounded-lg border border-dawn bg-dawn !px-6 !py-3.5 text-base text-[#1e2721] shadow-[0_0_40px_-6px_rgba(242,179,74,0.7)] hover:bg-[#f7c66d]" onFocus={() => setGrow(true)} onBlur={() => setGrow(false)}>
               Bury your first project
             </Link>
             <Link href="/bury?sample=1" className="text-sm font-semibold text-[#f4f1e6] underline-offset-4 hover:underline">
