@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAssessed, useGraveyard } from "@/lib/store";
 import { VERDICTS, VERDICT_ORDER } from "@/lib/verdicts";
@@ -12,6 +12,7 @@ import { track } from "@/lib/consent";
 import { GraveLoader } from "@/components/ui/GraveLoader";
 import { LedgerView, PlotsView, TimelineView } from "./Views";
 import { QuickPanel } from "./QuickPanel";
+import { VIEWS, ViewSwitcher, type ViewId } from "./ViewSwitcher";
 
 const GardenScene = dynamic(() => import("@/components/three/GardenScene"), {
   ssr: false,
@@ -21,14 +22,6 @@ const GardenScene = dynamic(() => import("@/components/three/GardenScene"), {
     </div>
   ),
 });
-
-const VIEWS = [
-  { id: "garden", label: "Garden", hint: "3D map, glow shows potential" },
-  { id: "plots", label: "Plots", hint: "One card per project" },
-  { id: "ledger", label: "Ledger", hint: "Sortable table" },
-  { id: "timeline", label: "Timeline", hint: "Lifespans side by side" },
-] as const;
-type ViewId = (typeof VIEWS)[number]["id"];
 
 type Filter = "all" | Verdict | "high";
 
@@ -44,7 +37,6 @@ export function GardenApp() {
   const all = useAssessed();
   const hydrated = useGraveyard((s) => s.hydrated);
   const resetDemo = useGraveyard((s) => s.resetDemo);
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const items = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -78,15 +70,6 @@ export function GardenApp() {
     if (window.matchMedia("(max-width: 1023px)").matches) setSheetOpen(true);
   }, []);
 
-  const onTabKey = (e: React.KeyboardEvent, idx: number) => {
-    const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    if (!dir) return;
-    e.preventDefault();
-    const next = (idx + dir + VIEWS.length) % VIEWS.length;
-    changeView(VIEWS[next].id);
-    tabRefs.current[next]?.focus();
-  };
-
   const selected = all.find((i) => i.project.id === selectedId) ?? null;
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: all.length, high: all.filter((x) => x.a.score >= 60).length };
@@ -109,36 +92,7 @@ export function GardenApp() {
             {all.length} projects resting. {counts.revive} ready to revive.
           </p>
         </div>
-        <div role="tablist" aria-label="Choose a view" className="flex rounded-lg border border-line bg-card p-1">
-          {VIEWS.map((v, i) => (
-            <button
-              key={v.id}
-              ref={(el) => {
-                tabRefs.current[i] = el;
-              }}
-              role="tab"
-              id={`tab-${v.id}`}
-              aria-selected={view === v.id}
-              aria-controls="garden-view"
-              tabIndex={view === v.id ? 0 : -1}
-              title={v.hint}
-              onClick={() => changeView(v.id)}
-              onKeyDown={(e) => onTabKey(e, i)}
-              className={`relative rounded-md px-3 py-1.5 text-sm font-medium transition-colors sm:px-4 ${
-                view === v.id ? "text-white" : "text-ink-2 hover:text-ink"
-              }`}
-            >
-              {view === v.id && (
-                <motion.span
-                  layoutId="view-tab"
-                  className="absolute inset-0 rounded-md bg-moss"
-                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
-                />
-              )}
-              <span className="relative">{v.label}</span>
-            </button>
-          ))}
-        </div>
+        <ViewSwitcher view={view} onChange={changeView} />
       </div>
 
       <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -180,7 +134,7 @@ export function GardenApp() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div id="garden-view" role="tabpanel" aria-labelledby={`tab-${view}`} className="min-w-0">
+        <div id="garden-view" role="tabpanel" aria-label={`${view} view`} className="min-w-0">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={view}
@@ -192,9 +146,9 @@ export function GardenApp() {
               {items.length === 0 ? (
                 <EmptyState query={query} onClear={() => (setQuery(""), setFilter("all"))} />
               ) : view === "garden" ? (
-                <div className="relative h-[460px] overflow-hidden rounded-xl border border-line bg-[#f3ede0] sm:h-[560px]">
+                <div className="relative h-[460px] overflow-hidden rounded-xl border border-[#1d2f3a] bg-[#0d1b26] shadow-[0_30px_80px_-40px_rgba(13,27,38,0.8)] sm:h-[560px]">
                   <GardenScene stones={stones} selectedId={selectedId} onSelect={select} className="h-full w-full" />
-                  <p className="pointer-events-none absolute bottom-3 left-3 rounded-[4px] bg-card/90 px-2 py-1 text-xs text-ink-2">
+                  <p className="pointer-events-none absolute bottom-3 left-3 rounded-[6px] border border-white/10 bg-[#0d1b26]/80 px-2.5 py-1 text-xs text-[#d9dce4] backdrop-blur-sm">
                     Drag to look around. Brighter glow means higher revival potential.
                   </p>
                 </div>
