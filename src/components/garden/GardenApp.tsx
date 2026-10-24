@@ -103,13 +103,13 @@ export function GardenApp() {
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-8 pb-10 sm:px-6">
+    <div className="mx-auto max-w-7xl px-4 pt-6 pb-10 sm:px-6 sm:pt-8">
       {/* 1. Orient: what this page is and what to do here */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="max-w-2xl">
           <p className="eyebrow">Your graveyard</p>
           <SplitText as="h1" className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl" text="The Infinite Garden" />
-          <p className="mt-2 text-ink-2">Every stone is an unfinished project. Pick one to see its verdict, then drag its card onto an action.</p>
+          <p className="mt-2 text-sm text-ink-2 sm:text-base">Every stone is an unfinished project. Pick one to see its verdict, then drag its card onto an action.</p>
         </div>
         <div className="flex gap-2 text-sm" aria-label="Garden summary">
           <span className="rounded-full border border-line bg-card px-3 py-1.5">
@@ -122,11 +122,11 @@ export function GardenApp() {
       </div>
 
       {/* 2. Find: view, search and filters live together in one toolbar */}
-      <div className="mt-6 flex flex-wrap items-center gap-2.5 rounded-2xl border border-line bg-paper-2/60 p-2.5" data-tour="toolbar">
+      <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl sm:mt-6 sm:gap-2.5 border border-line bg-paper-2/60 p-2.5" data-tour="toolbar">
         <div className="shrink-0 max-sm:w-full">
           <ViewSwitcher view={view} onChange={changeView} />
         </div>
-        <GlassSearch id="garden-search" label="Search projects" className="min-w-[220px] flex-1 2xl:max-w-xs" placeholder="Search names, tags, stack" value={query} onChange={setQuery} />
+        <GlassSearch id="garden-search" label="Search projects" className="min-w-0 flex-1 basis-[220px] 2xl:max-w-xs" placeholder="Search names, tags, stack" value={query} onChange={setQuery} />
         <div
           className="flex w-full min-w-0 gap-1.5 overflow-x-auto 2xl:w-auto 2xl:flex-1 [mask-image:linear-gradient(90deg,#000_92%,transparent)] [scrollbar-width:none]"
           role="group"
@@ -169,14 +169,14 @@ export function GardenApp() {
                 {items.length === 0 ? (
                   <EmptyState query={query} onClear={() => (setQuery(""), setFilter("all"))} />
                 ) : view === "garden" ? (
-                  <div className="relative h-[520px] overflow-hidden rounded-2xl border border-[#1d2f3a] bg-[#060d14] sm:h-[clamp(540px,calc(100svh-120px),740px)]">
+                  <div className="relative h-[clamp(420px,68svh,560px)] overflow-hidden rounded-2xl border border-[#1d2f3a] bg-[#060d14] sm:h-[clamp(540px,calc(100svh-120px),740px)]">
                     <SpaceGarden stones={stones} selectedId={selectedId} onSelect={setSelectedId} className="h-full w-full" />
                   {selected && (
                     <button
                       onClick={() => setSheetOpen(true)}
-                      className="absolute top-14 right-3 z-30 rounded-lg border border-white/15 bg-[#f2b34a] px-3 py-1.5 text-xs font-semibold text-[#1e2721] shadow-lg lg:hidden"
+                      className="absolute bottom-[132px] left-1/2 z-30 max-w-[calc(100%-1.5rem)] -translate-x-1/2 truncate rounded-full border border-white/15 bg-[#f2b34a] px-4 py-2 text-sm font-semibold text-[#1e2721] shadow-lg lg:hidden"
                     >
-                      Details: {selected.project.name}
+                      View {selected.project.name} ↑
                     </button>
                   )}
                   </div>

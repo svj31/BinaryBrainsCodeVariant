@@ -92,7 +92,7 @@ function Graveyard({ causes, all, focus, setFocus }: { causes: { c: Cause; n: nu
   const ref = useRef<HTMLDivElement>(null);
   const seen = useInView(ref, { once: true, amount: 0.3 });
   return (
-    <div ref={ref} className="flex items-end gap-2 overflow-x-auto pb-1 sm:gap-3" role="group" aria-label="Causes of death">
+    <div ref={ref} className="grid grid-cols-4 items-end gap-1.5 sm:flex sm:gap-3" role="group" aria-label="Causes of death">
       {causes.map(({ c, n }, ci) => {
         const on = focus === c;
         const dim = focus && !on;
@@ -103,15 +103,15 @@ function Graveyard({ causes, all, focus, setFocus }: { causes: { c: Cause; n: nu
             onClick={() => setFocus(on ? null : c)}
             aria-pressed={on}
             aria-label={`${CAUSES[c].label}: ${n} projects`}
-            className={`group flex min-w-[64px] flex-1 flex-col items-center rounded-xl px-1 pt-2 pb-2 transition-[background,opacity] ${on ? "bg-dawn-soft" : "hover:bg-paper"} ${dim ? "opacity-35" : ""}`}
+            className={`group flex min-w-0 flex-col sm:min-w-[64px] sm:flex-1 items-center rounded-xl px-1 pt-2 pb-2 transition-[background,opacity] ${on ? "bg-dawn-soft" : "hover:bg-paper"} ${dim ? "opacity-35" : ""}`}
           >
             <span className="font-display text-lg font-semibold">{n}</span>
-            <span className="mt-1 flex min-h-[96px] flex-col-reverse items-center gap-0.5">
+            <span className="mt-1 flex min-h-[72px] flex-col-reverse items-center gap-0.5 sm:min-h-[96px]">
               {projects.map((x, i) => (
                 <motion.svg
                   key={x.project.id}
                   viewBox="0 0 20 22"
-                  className="h-8 w-7"
+                  className="h-6 w-5 sm:h-8 sm:w-7"
                   initial={{ y: -160, opacity: 0, rotate: i % 2 ? 14 : -14 }}
                   animate={seen ? { y: 0, opacity: 1, rotate: 0 } : undefined}
                   transition={{ type: "spring", stiffness: 260, damping: 13, delay: 0.15 + ci * 0.12 + i * 0.09 }}
@@ -123,7 +123,7 @@ function Graveyard({ causes, all, focus, setFocus }: { causes: { c: Cause; n: nu
               ))}
             </span>
             <span className="mt-2 h-[3px] w-full rounded-full bg-[#8a6f4e]/60" aria-hidden="true" />
-            <span className={`mt-2 h-[3.6em] text-center text-[11px] leading-tight ${on ? "font-semibold text-ink" : "text-ink-2"}`}>{CAUSES[c].label}</span>
+            <span className={`mt-2 h-[3.6em] w-full break-words text-center text-[10px] leading-tight sm:text-[11px] ${on ? "font-semibold text-ink" : "text-ink-2"}`}>{CAUSES[c].label}</span>
           </button>
         );
       })}
@@ -143,8 +143,8 @@ function Lifelines({ all, maxLife, inFocus }: { all: Assessed[]; maxLife: number
         const color = VERDICTS[x.a.verdict].color;
         const on = inFocus(x);
         return (
-          <motion.li key={x.project.id} animate={{ opacity: on ? 1 : 0.2 }} className="group grid grid-cols-[110px_1fr] items-center gap-3 sm:grid-cols-[150px_1fr_120px]">
-            <Link href={`/garden/${x.project.id}`} className="truncate text-sm font-medium hover:underline">
+          <motion.li key={x.project.id} animate={{ opacity: on ? 1 : 0.2 }} className="group grid grid-cols-[88px_minmax(0,1fr)] items-center gap-2 sm:gap-3 sm:grid-cols-[150px_1fr_120px]">
+            <Link href={`/garden/${x.project.id}`} className="truncate text-xs font-medium hover:underline sm:text-sm">
               {x.project.name}
             </Link>
             <svg viewBox={`0 0 ${W} 44`} className="h-9 w-full overflow-visible" role="img" aria-label={`${x.project.name} lived ${days} days`}>
@@ -175,7 +175,7 @@ function Lifelines({ all, maxLife, inFocus }: { all: Assessed[]; maxLife: number
 
 function Card({ title, sub, children, className = "", delay = 0 }: { title: string; sub?: string; children: React.ReactNode; className?: string; delay?: number }) {
   return (
-    <Reveal delay={delay} className={`rounded-xl border border-line bg-card p-5 sm:p-6 ${className}`}>
+    <Reveal delay={delay} className={`min-w-0 rounded-xl border border-line bg-card p-4 sm:p-6 ${className}`}>
       <h2 className="font-display text-xl font-semibold">{title}</h2>
       {sub && <p className="mt-1 text-sm text-ink-2">{sub}</p>}
       <div className="mt-5">{children}</div>
@@ -250,17 +250,17 @@ export function DeathReport() {
   const hv = hoverV ? s.verdicts.find((x) => x.v === hoverV)! : null;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-8 pb-10 sm:px-6">
+    <div className="mx-auto max-w-7xl overflow-x-clip px-4 pt-8 pb-10 sm:px-6">
       <p className="eyebrow">Learn your pattern</p>
       <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">Death Report</h1>
       <p className="mt-2 max-w-2xl text-ink-2">Built live from the {total} projects in your garden. Click a cause to trace it through every chart.</p>
 
       {top && (
-        <Reveal className="relative mt-8 grid items-center gap-6 overflow-hidden rounded-2xl bg-[#13222e] p-6 text-[#f4f1e6] sm:p-8 lg:grid-cols-[1fr_auto]">
+        <Reveal className="relative mt-8 grid min-w-0 items-center gap-6 overflow-hidden rounded-2xl bg-[#13222e] p-5 text-[#f4f1e6] sm:p-8 lg:grid-cols-[1fr_auto]">
           <motion.div className="absolute -right-20 -bottom-24 h-72 w-72 rounded-full bg-dawn/30 blur-3xl" animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 6, repeat: Infinity }} aria-hidden="true" />
-          <div className="relative">
+          <div className="relative min-w-0">
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-[#cfc9bc]">Your pattern</p>
-          <p className="relative mt-3 max-w-3xl font-display text-2xl leading-snug sm:text-3xl">
+          <p className="relative mt-3 max-w-3xl font-display text-xl leading-snug sm:text-3xl">
             {CAUSES[top.c].label} ended {top.n} of your {total} projects. They usually stop after about {Math.round(s.avgLife / 7)} weeks, with {s.avgBuilt}% of the plan built.
           </p>
           <p className="relative mt-4 max-w-2xl text-[#dcd6ca]">
@@ -282,7 +282,7 @@ export function DeathReport() {
         ].map(([k, v, suf], i) => (
           <motion.div
             key={k as string}
-            className="rounded-xl border border-line bg-card p-4"
+            className="min-w-0 rounded-xl border border-line bg-card p-3 sm:p-4"
             style={{ transformPerspective: 600 }}
             initial={{ rotateX: -80, opacity: 0, y: 20 }}
             whileInView={{ rotateX: 0, opacity: 1, y: 0 }}
@@ -290,11 +290,11 @@ export function DeathReport() {
             viewport={{ once: true }}
             transition={{ type: "spring", stiffness: 180, damping: 16, delay: i * 0.08 }}
           >
-            <dt className="flex items-center gap-2 text-sm text-ink-2">
+            <dt className="flex items-center gap-1.5 text-xs text-ink-2 sm:gap-2 sm:text-sm">
               <span aria-hidden="true">{["🪦", "⏳", "🧱", "✨", "🌱", "🧰"][i]}</span>
               {k}
             </dt>
-            <dd className="mt-1 font-display text-3xl font-semibold">
+            <dd className="mt-1 font-display text-2xl font-semibold sm:text-3xl">
               <Count to={v as number} suffix={suf as string} />
             </dd>
           </motion.div>
@@ -315,7 +315,7 @@ export function DeathReport() {
 
         <Card title="Verdict mix" sub="Where the garden goes if you follow every suggestion." delay={0.05}>
           <div className="flex flex-col items-center gap-6 sm:flex-row">
-            <svg viewBox="-80 -80 160 160" className="h-48 w-48 shrink-0" role="img" aria-label={s.verdicts.map((x) => `${VERDICTS[x.v].label} ${x.n}`).join(", ")}>
+            <svg viewBox="-80 -80 160 160" className="h-40 w-40 shrink-0 sm:h-48 sm:w-48" role="img" aria-label={s.verdicts.map((x) => `${VERDICTS[x.v].label} ${x.n}`).join(", ")}>
               {arcs.map((x, i) => (
                 <motion.path
                   key={x.v}
@@ -386,7 +386,7 @@ export function DeathReport() {
         </Card>
 
         <Card title="Burial season" sub="Which months your projects tend to stop." delay={0.05}>
-          <div className="grid grid-cols-12 gap-1.5">
+          <div className="grid grid-cols-12 gap-1 sm:gap-1.5">
             {s.months.map((m, i) => {
               const n = m.filter(inFocus).length;
               const max = Math.max(...s.months.map((x) => x.length), 1);
@@ -416,7 +416,7 @@ export function DeathReport() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.05 }}
                 className="rounded-[6px] border border-line px-2.5 py-1 text-sm"
-                style={{ fontSize: `${0.8 + n * 0.08}rem` }}
+                style={{ fontSize: `${Math.min(1.1, 0.8 + n * 0.06)}rem` }}
               >
                 {t} <span className="font-mono text-xs text-ink-3">{n}</span>
               </motion.li>

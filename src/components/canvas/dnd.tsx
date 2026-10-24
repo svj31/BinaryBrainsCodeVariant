@@ -102,11 +102,33 @@ export function DragCard({
     let lastX = sx;
     let py = sy;
     let raf = 0;
+    // touch: a quick swipe scrolls the page; press and hold briefly to lift the card
+    const touch = e.pointerType === "touch";
+    let armed = !touch;
+    const hold = touch
+      ? window.setTimeout(() => {
+          armed = true;
+          navigator.vibrate?.(12);
+          begin();
+        }, 260)
+      : 0;
+    const blockScroll = (ev: TouchEvent) => started && ev.cancelable && ev.preventDefault();
+    if (touch) window.addEventListener("touchmove", blockScroll, { passive: false });
+    const begin = () => {
+      if (started) return;
+      started = true;
+      useDnd.getState().start(data, "pointer");
+      raf = requestAnimationFrame(edge);
+      play("pick");
+      document.body.classList.add("sw-dragging");
+      setGhost({ x: lastX, y: py, w: r.width, h: r.height, ox: sx - r.left, oy: sy - r.top, tilt: 0, sx: 1, sy: 1 });
+    };
     // near the top or bottom edge, the page scrolls so far-away zones are reachable
     const edge = () => {
       const band = Math.min(110, innerHeight * 0.15);
       const v = py < band ? -(band - py) / 6 : py > innerHeight - band ? (py - (innerHeight - band)) / 6 : 0;
-      if (v) {
+      const inTray = (document.elementFromPoint(lastX, py) as HTMLElement | null)?.closest("[data-dnd-tray]");
+      if (v && !inTray) {
         scrollBy(0, v);
         hitTest(lastX, py);
       }
@@ -127,12 +149,15 @@ export function DragCard({
 
     const move = (ev: PointerEvent) => {
       if (!started) {
-        if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
-        started = true;
-        useDnd.getState().start(data, "pointer");
-        raf = requestAnimationFrame(edge);
-        play("pick");
-        document.body.classList.add("sw-dragging");
+        const dist = Math.hypot(ev.clientX - sx, ev.clientY - sy);
+        if (!armed) {
+          if (dist > 8) up(); // finger moved before the hold: it's a scroll
+          return;
+        }
+        if (dist < 5) return;
+        lastX = ev.clientX;
+        py = ev.clientY;
+        begin();
       }
       ev.preventDefault();
       // jelly physics: the card stretches along its direction of travel and squashes across it
@@ -151,7 +176,9 @@ export function DragCard({
       hitTest(ev.clientX, ev.clientY);
     };
     const up = () => {
+      clearTimeout(hold);
       cancelAnimationFrame(raf);
+      window.removeEventListener("touchmove", blockScroll);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
@@ -200,7 +227,7 @@ export function DragCard({
         }}
         whileHover={disabled ? undefined : { y: -4, scaleX: 1.03, scaleY: 0.97, transition: { type: "spring", stiffness: 500, damping: 12 } }}
         whileTap={disabled ? undefined : { scaleX: 0.95, scaleY: 1.05 }}
-        className={`relative touch-none select-none ${disabled ? "cursor-not-allowed opacity-60" : "cursor-grab"} ${lifted && mode === "keyboard" ? "ring-2 ring-dawn ring-offset-2" : ""} ${className}`}
+        className={`relative touch-pan-y select-none [-webkit-touch-callout:none] ${disabled ? "cursor-not-allowed opacity-60" : "cursor-grab"} ${lifted && mode === "keyboard" ? "ring-2 ring-dawn ring-offset-2" : ""} ${className}`}
       >
         {children}
         <span id={hintId} className="sr-only">
@@ -381,7 +408,7 @@ export function DndLayer() {
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 30, opacity: 0 }}
-            className="pointer-events-none fixed bottom-5 left-1/2 z-[97] -translate-x-1/2 rounded-lg bg-ink px-4 py-2 text-sm text-paper shadow-xl"
+            className="pointer-events-none fixed bottom-5 left-1/2 z-[97] max-lg:top-20 max-lg:bottom-auto max-lg:max-w-[90vw] max-lg:text-center -translate-x-1/2 rounded-lg bg-ink px-4 py-2 text-sm text-paper shadow-xl"
             aria-hidden="true"
           >
             Carrying <strong className="text-dawn">{drag.label}</strong>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGraveyard } from "@/lib/store";
 import type { Organ, Project } from "@/lib/types";
@@ -118,6 +118,14 @@ export function SalvageYard() {
   const [hot, setHot] = useState<string | null>(null);
   const [delivered, setDelivered] = useState<{ part: string; name: string; id: string } | null>(null);
   const living = projects.filter((p) => p.status !== "archived");
+  const carrying = useDnd((s) => s.drag?.kind === "part");
+  // keep the aside's space while its zones float as a tray, so cards don't jump under the finger
+  const asideRef = useRef<HTMLElement>(null);
+  const [asideH, setAsideH] = useState<number>();
+  useLayoutEffect(() => {
+    if (!carrying) setAsideH(undefined);
+  }, [carrying]);
+  if (carrying && asideH === undefined && asideRef.current) setAsideH(asideRef.current.offsetHeight);
 
   const borrow = async (part: Part, t: Project) => {
     if (t.id === part.from.id) return useDnd.getState().say(`${part.name} already belongs to ${t.name}.`);
@@ -179,11 +187,21 @@ export function SalvageYard() {
       <input id="yard-q" type="search" className="field mt-4 sm:w-96" placeholder="Search parts, projects, stack" value={q} onChange={(e) => setQ(e.target.value)} />
 
       <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_280px]">
-      <aside className="order-first min-w-0 lg:order-last" aria-label="Borrow into a project">
-        <div className="lg:sticky lg:top-24">
+      <aside ref={asideRef} style={{ minHeight: asideH }} className="order-first min-w-0 lg:order-last" aria-label="Borrow into a project">
+        <div
+          data-dnd-tray
+          className={
+            carrying
+              ? "max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-[95] max-lg:rounded-t-2xl max-lg:border-t max-lg:border-line max-lg:bg-paper max-lg:p-4 max-lg:pb-[max(1rem,env(safe-area-inset-bottom))] max-lg:shadow-[0_-20px_40px_-20px_rgba(30,39,33,0.45)] lg:sticky lg:top-24"
+              : "lg:sticky lg:top-24"
+          }
+        >
           <p className="eyebrow">Borrow into</p>
-          <p className="mt-1 text-sm text-ink-2">Drag a part card onto the project that should get it.</p>
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-2 lg:max-h-[70vh] lg:flex-col lg:overflow-y-auto lg:overflow-x-visible lg:pb-0">
+          <p className="mt-1 text-sm text-ink-2">
+            <span className="lg:hidden">{carrying ? "Drop the part on a project below." : "Press and hold a part card, then drag it onto a project."}</span>
+            <span className="max-lg:hidden">Drag a part card onto the project that should get it.</span>
+          </p>
+          <div className={`mt-3 gap-2 lg:flex lg:max-h-[70vh] lg:flex-col lg:overflow-y-auto lg:pb-0 ${carrying ? "grid max-h-[38vh] grid-cols-2 overflow-y-auto" : "flex overflow-x-auto pb-2"}`}>
             {living.map((t) => (
               <ActionZone
                 key={t.id}
@@ -192,7 +210,7 @@ export function SalvageYard() {
                 accepts={["part"]}
                 compact
                 tone="var(--c-salvage)"
-                className="min-w-[180px] lg:min-w-0"
+                className={carrying ? "min-w-0" : "min-w-[180px] lg:min-w-0"}
                 onDrop={(c) => borrow(c.payload as Part, t)}
               >
                 <span className="relative ml-auto font-mono text-[11px] text-ink-3">{t.organs.length}</span>
@@ -201,13 +219,12 @@ export function SalvageYard() {
           </div>
         </div>
       </aside>
-      <motion.ul layout className="grid min-w-0 content-start gap-4 self-start sm:grid-cols-2 xl:grid-cols-3">
+      <motion.ul className="grid min-w-0 content-start gap-4 self-start sm:grid-cols-2 xl:grid-cols-3">
         <AnimatePresence mode="popLayout">
           {shown.map((o, i) => {
             const n = borrowCount(o.id);
             return (
               <motion.li
-                layout
                 key={o.id}
                 initial={{ opacity: 0, y: 24, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -232,7 +249,7 @@ export function SalvageYard() {
                     <Link href={`/garden/${o.from.id}`} className="truncate text-ink-2 hover:text-ink">
                       from <span className="font-medium text-ink underline-offset-2 hover:underline">{o.from.name}</span>
                     </Link>
-                    <span className="shrink-0 font-mono text-[11px] uppercase tracking-wider text-ink-3">drag to borrow</span>
+                    <span className="shrink-0 font-mono text-[11px] uppercase tracking-wider text-ink-3"><span className="lg:hidden">hold &amp; drag</span><span className="max-lg:hidden">drag to borrow</span></span>
                   </div>
                 </div>
                 </div>

@@ -729,7 +729,7 @@ export default function SpaceGarden({ stones, selectedId, onSelect, className = 
         frameloop={visible ? "always" : "never"}
         dpr={low ? 1 : [1, 1.25]}
         camera={{ position: [0, 9, 34], fov: 60, near: 0.1, far: 300 }}
-        gl={{ antialias: true, powerPreference: "high-performance" }}
+        gl={{ antialias: !low, powerPreference: low ? "default" : "high-performance" }}
         fallback={<div className="flex h-full items-center justify-center p-6 text-center text-sm text-[#d9dce4]">Your browser could not open the space garden. Switch to the Plots or Ledger view.</div>}
       >
         <Suspense fallback={null}>
