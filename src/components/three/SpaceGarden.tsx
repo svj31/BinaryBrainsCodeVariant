@@ -378,6 +378,7 @@ export interface ShipCtl {
   steering: boolean; // pointer is over the view
   pos: THREE.Vector3; // ship position, read by the HUD
   yaw: number; // ship heading, read by the radar
+  pilot: boolean; // manual flight; off means easy mode (look, click, glide)
 }
 
 /** Star streaks hung in front of the cockpit; they stretch and brighten with speed. */
@@ -459,12 +460,14 @@ function Flight({ focus, home, ctl }: { focus: THREE.Vector3 | null; home: numbe
     const up = () => (dragging = false);
     const leave = () => (ctl.current.steering = false);
     const wheel = (e: WheelEvent) => {
+      // easy mode leaves the wheel to the page so scrolling never gets trapped
+      if (!ctl.current.pilot) return;
       e.preventDefault();
       glide.current = null;
       ctl.current.throttle = Math.max(0, Math.min(1, ctl.current.throttle - e.deltaY * 0.0012));
     };
     const kd = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.tagName === "INPUT") return;
+      if (!ctl.current.pilot || (e.target as HTMLElement)?.tagName === "INPUT") return;
       const k = e.key.toLowerCase();
       if (!(document.activeElement === el || el.matches(":hover"))) return;
       if (["w", "s", "a", "d", "q", "e", "arrowup", "arrowdown", "shift"].includes(k)) {
@@ -530,7 +533,7 @@ function Flight({ focus, home, ctl }: { focus: THREE.Vector3 | null; home: numbe
       const boost = keys.has("shift") ? 1.8 : 1;
       c.speed = THREE.MathUtils.damp(c.speed, c.throttle * MAX_SPEED * boost, 2.5, dt);
       // pointer steering only while moving, outside a calm dead zone
-      if (c.steering && c.speed > 0.6) {
+      if (c.pilot && c.steering && c.speed > 0.6) {
         const dz = (v: number) => (Math.abs(v) < 0.18 ? 0 : (v - Math.sign(v) * 0.18) / 0.82);
         L.ty -= dz(c.steerX) * dt * 1.1;
         L.tp = Math.max(-1.2, Math.min(1.2, L.tp - dz(c.steerY) * dt * 0.8));
@@ -649,7 +652,25 @@ export default function SpaceGarden({ stones, selectedId, onSelect, className = 
   const labels = useRef<LabelMap>(new Map());
   const [help, setHelp] = useState(false);
   const placed = useMemo(() => constellation(stones), [stones]);
-  const ctl = useRef<ShipCtl>({ throttle: 0, speed: 0, steerX: 0, steerY: 0, steering: false, pos: new THREE.Vector3(), yaw: 0 });
+  const ctl = useRef<ShipCtl>({ throttle: 0, speed: 0, steerX: 0, steerY: 0, steering: false, pos: new THREE.Vector3(), yaw: 0, pilot: false });
+  const [pilot, setPilotState] = useState(false);
+  const [tour, setTour] = useState(false);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("sw-pilot") === "1") setPilotState(true);
+    } catch {}
+  }, []);
+  useEffect(() => {
+    ctl.current.pilot = pilot;
+    if (!pilot) ctl.current.throttle = 0;
+  }, [pilot]);
+  const setPilot = (on: boolean) => {
+    setPilotState(on);
+    setTour(false);
+    try {
+      localStorage.setItem("sw-pilot", on ? "1" : "0");
+    } catch {}
+  };
   const target = placed.find((p) => p.stone.id === selectedId) ?? null;
   // autopilot order: best projects first, the same order as the spiral
   const hop = (d: 1 | -1) => {
@@ -671,6 +692,8 @@ export default function SpaceGarden({ stones, selectedId, onSelect, className = 
   });
   const box = useRef<HTMLDivElement>(null);
   const visible = useVisible(box);
+  // phones and low-power machines get a lighter sky so the garden stays smooth
+  const [low] = useState(() => typeof window !== "undefined" && (innerWidth < 768 || (navigator.hardwareConcurrency ?? 8) <= 4));
   const [dash, setDash] = useState(150);
   useEffect(() => {
     const fit = () => setDash(innerWidth < 640 ? 120 : 160);
@@ -678,6 +701,21 @@ export default function SpaceGarden({ stones, selectedId, onSelect, className = 
     addEventListener("resize", fit);
     return () => removeEventListener("resize", fit);
   }, []);
+
+  // auto tour: glide to the next project every few seconds until the visitor takes over
+  useEffect(() => {
+    if (!tour) return;
+    hop(1);
+    const t = setInterval(() => hop(1), 5200);
+    const stop = () => setTour(false);
+    const el = box.current;
+    el?.addEventListener("pointerdown", stop);
+    return () => {
+      clearInterval(t);
+      el?.removeEventListener("pointerdown", stop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tour]);
 
   function pick(id: string) {
     onSelect?.(id);
@@ -689,7 +727,7 @@ export default function SpaceGarden({ stones, selectedId, onSelect, className = 
     <div ref={box} className={`relative isolate ${className}`} data-cursor={hoverId ? "stone" : "drag"}>
       <Canvas
         frameloop={visible ? "always" : "never"}
-        dpr={[1, 1.25]}
+        dpr={low ? 1 : [1, 1.25]}
         camera={{ position: [0, 9, 34], fov: 60, near: 0.1, far: 300 }}
         gl={{ antialias: true, powerPreference: "high-performance" }}
         fallback={<div className="flex h-full items-center justify-center p-6 text-center text-sm text-[#d9dce4]">Your browser could not open the space garden. Switch to the Plots or Ledger view.</div>}
@@ -699,11 +737,11 @@ export default function SpaceGarden({ stones, selectedId, onSelect, className = 
           <fog attach="fog" args={["#060d14", 35, 110]} />
           <hemisphereLight args={["#b9c9ea", "#14261c", 0.7]} />
           <ambientLight intensity={0.25} />
-          <Stars count={1400} size={0.6} color="#f4f1e6" />
-          <Stars count={250} size={1.4} color="#ffe2a8" r={110} />
+          <Stars count={low ? 600 : 1400} size={low ? 0.8 : 0.6} color="#f4f1e6" />
+          <Stars count={low ? 120 : 250} size={1.4} color="#ffe2a8" r={110} />
           <Nebulae />
           <Boundary />
-          <Rocks />
+          <Rocks count={low ? 30 : 70} />
           <Comets />
           <Planet />
           <Moon />
@@ -766,6 +804,10 @@ export default function SpaceGarden({ stones, selectedId, onSelect, className = 
         onRestart={() => (setFocus(null), setHome((h) => h + 1))}
         help={help}
         setHelp={setHelp}
+        pilot={pilot}
+        setPilot={setPilot}
+        tour={tour}
+        setTour={setTour}
       />
     </div>
   );
@@ -843,6 +885,10 @@ function Cockpit({
   onRestart,
   help,
   setHelp,
+  pilot,
+  setPilot,
+  tour,
+  setTour,
 }: {
   dash: number;
   ctl: React.RefObject<ShipCtl>;
@@ -854,6 +900,10 @@ function Cockpit({
   onRestart: () => void;
   help: boolean;
   setHelp: (f: (h: boolean) => boolean) => void;
+  pilot: boolean;
+  setPilot: (on: boolean) => void;
+  tour: boolean;
+  setTour: (f: (t: boolean) => boolean) => void;
 }) {
   // the dashboard polls the ship itself, so instrument updates never re-render the 3D scene
   const [hud, setHud] = useState<Hud>({ speed: 0, throttle: 0, dist: 0, x: 0, z: 0, yaw: 0 });
@@ -870,11 +920,13 @@ function Cockpit({
   const passed = useRef(-1);
 
   // flight school runs once, the first time the cockpit opens
+  // flight school only matters for manual flying, so it opens the first time Pilot mode is switched on
   useEffect(() => {
+    if (!pilot) return setStep(-1);
     try {
       if (!localStorage.getItem("sw-flight-school")) setStep(0);
     } catch {}
-  }, []);
+  }, [pilot]);
   const done = () => {
     try {
       localStorage.setItem("sw-flight-school", "1");
@@ -941,27 +993,69 @@ function Cockpit({
         {target && <p className="mt-2 text-center font-mono text-[9px] tracking-[0.2em] whitespace-nowrap text-[#9fe3b0]/80 uppercase">{hud.dist < 11 ? `Holding at ${target.stone.name}` : `${Math.round(hud.dist)} m to target`}</p>}
       </div>
 
+      {/* mode switch: Easy for everyone, Pilot for people who want to fly */}
+      <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-2">
+        <div role="radiogroup" aria-label="Control mode" className="flex rounded-lg border border-white/15 bg-[#0d1b26]/85 p-0.5 backdrop-blur-sm">
+          {([false, true] as const).map((m) => (
+            <button
+              key={String(m)}
+              role="radio"
+              aria-checked={pilot === m}
+              onClick={() => setPilot(m)}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${pilot === m ? "bg-[#f2b34a] text-[#1e2721]" : "text-[#d9dce4] hover:text-white"}`}
+            >
+              {m ? "Pilot" : "Easy"}
+            </button>
+          ))}
+        </div>
+        {!pilot && (
+          <button onClick={() => setTour((t) => !t)} aria-pressed={tour} className="rounded-lg border border-white/15 bg-[#0d1b26]/85 px-3 py-1.5 text-xs font-semibold text-[#f4f1e6] backdrop-blur-sm hover:border-[#f2b34a]">
+            {tour ? "■ Stop tour" : "▶ Auto tour"}
+          </button>
+        )}
+      </div>
       <div className="absolute top-3 right-3 z-20 flex gap-2">
-        <button onClick={() => ((passed.current = -1), setStep(0))} className="rounded-full border border-white/15 bg-[#0d1b26]/80 px-3 py-1.5 text-xs font-semibold text-[#f4f1e6] backdrop-blur-sm hover:border-[#f2b34a]">
-          Flight school
+        {pilot && (
+          <button onClick={() => ((passed.current = -1), setStep(0))} className="rounded-lg border border-white/15 bg-[#0d1b26]/80 px-3 py-1.5 text-xs font-semibold text-[#f4f1e6] backdrop-blur-sm hover:border-[#f2b34a]">
+            Flight school
+          </button>
+        )}
+        <button onClick={() => setHelp((h) => !h)} aria-expanded={help} className="rounded-lg border border-white/15 bg-[#0d1b26]/80 px-3 py-1.5 text-xs font-semibold text-[#f4f1e6] backdrop-blur-sm hover:border-[#f2b34a]">
+          {help ? "Close" : "Help"}
         </button>
-        <button onClick={() => setHelp((h) => !h)} aria-expanded={help} className="rounded-full border border-white/15 bg-[#0d1b26]/80 px-3 py-1.5 text-xs font-semibold text-[#f4f1e6] backdrop-blur-sm hover:border-[#f2b34a]">
-          {help ? "Close" : "Controls"}
-        </button>
-        <button onClick={onRestart} className="rounded-full border border-white/15 bg-[#0d1b26]/80 px-3 py-1.5 text-xs font-semibold text-[#f4f1e6] backdrop-blur-sm hover:border-[#f2b34a]">
-          ⟲ Restart
+        <button onClick={onRestart} aria-label="Reset view" className="rounded-lg border border-white/15 bg-[#0d1b26]/80 px-3 py-1.5 text-xs font-semibold text-[#f4f1e6] backdrop-blur-sm hover:border-[#f2b34a]">
+          ⟲ Reset
         </button>
       </div>
+      {!pilot && !help && (
+        <p className="pointer-events-none absolute left-1/2 z-10 hidden -translate-x-1/2 rounded-lg bg-[#0d1b26]/75 px-3 py-1.5 text-center text-xs text-[#d9dce4] backdrop-blur-sm sm:block" style={{ bottom: dash + 10 }}>
+          Drag to look around · ◀ ▶ to visit projects · click any glowing stone
+        </p>
+      )}
       {help && (
         <div className="absolute top-14 right-3 z-20 w-64 rounded-xl border border-white/10 bg-[#0d1b26]/92 p-3 text-xs leading-relaxed text-[#d9dce4] backdrop-blur-sm" role="note">
-          <p className="mb-1.5 font-semibold text-[#f4f1e6]">Flying your ship</p>
-          <ul className="space-y-1">
-            <li><b>◀ ▶</b> or <b>arrow keys</b>: autopilot between projects</li>
-            <li><b>Click a stone</b> or a radar dot: fly straight to it</li>
-            <li><b>Throttle</b>, <b>W / S</b> or <b>scroll</b>: cruising speed</li>
-            <li><b>Point</b> to steer while moving, <b>drag</b> to look when stopped</li>
-            <li className="hidden [@media(pointer:fine)]:list-item"><b>A / D</b> turn, <b>Q / E</b> down and up, <b>Shift</b> boost</li>
-          </ul>
+          {pilot ? (
+            <>
+              <p className="mb-1.5 font-semibold text-[#f4f1e6]">Pilot mode</p>
+              <ul className="space-y-1">
+                <li><b>Throttle</b>, <b>W / S</b> or <b>scroll</b>: cruising speed</li>
+                <li><b>Point</b> to steer while moving, <b>drag</b> to look when stopped</li>
+                <li className="hidden [@media(pointer:fine)]:list-item"><b>A / D</b> turn, <b>Q / E</b> down and up, <b>Shift</b> boost</li>
+                <li><b>◀ ▶</b> autopilot between projects</li>
+              </ul>
+            </>
+          ) : (
+            <>
+              <p className="mb-1.5 font-semibold text-[#f4f1e6]">Easy mode</p>
+              <ul className="space-y-1">
+                <li><b>Drag</b> (or swipe) to look around</li>
+                <li><b>◀ ▶</b> or <b>arrow keys</b>: glide to the previous or next project</li>
+                <li><b>Click a stone</b> or a radar dot to fly straight to it</li>
+                <li><b>Auto tour</b> visits every project for you</li>
+                <li>Want to fly yourself? Switch to <b>Pilot</b>.</li>
+              </ul>
+            </>
+          )}
         </div>
       )}
 
@@ -980,7 +1074,7 @@ function Cockpit({
           </Screen>
 
           {/* left-centre: systems */}
-          <Screen label="Systems" className="hidden w-36 shrink-0 lg:block">
+          {pilot && <Screen label="Systems" className="hidden w-36 shrink-0 lg:block">
             <ul className="mt-1 space-y-1 font-mono text-[9px] text-[#c3cbc8]">
               {[
                 ["Hull", "100%", "#7fd29a"],
@@ -1004,12 +1098,12 @@ function Cockpit({
                 </span>
               ))}
             </div>
-          </Screen>
+          </Screen>}
 
           {/* centre: navigation computer */}
           <Screen label="Navigation" className={`min-w-0 flex-1 ${glow("auto")}`}>
             <div className="mt-1 flex items-center gap-2">
-              <button onClick={() => onHop(-1)} aria-label="Fly to previous project" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-[#2c4252] bg-[#0b1820] text-[#f4f1e6] hover:border-[#f2b34a]">
+              <button onClick={() => onHop(-1)} aria-label="Fly to previous project" className={`flex shrink-0 items-center justify-center rounded-md border border-[#2c4252] bg-[#0b1820] text-[#f4f1e6] hover:border-[#f2b34a] ${pilot ? "h-9 w-9" : "h-11 w-11 text-lg"}`}>
                 ◀
               </button>
               <div className="min-w-0 flex-1 text-center">
@@ -1024,17 +1118,17 @@ function Cockpit({
                   </p>
                 )}
               </div>
-              <button onClick={() => onHop(1)} aria-label="Fly to next project" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-[#2c4252] bg-[#0b1820] text-[#f4f1e6] hover:border-[#f2b34a]">
+              <button onClick={() => onHop(1)} aria-label="Fly to next project" className={`flex shrink-0 items-center justify-center rounded-md border border-[#2c4252] bg-[#0b1820] text-[#f4f1e6] hover:border-[#f2b34a] ${pilot ? "h-9 w-9" : "h-11 w-11 text-lg"}`}>
                 ▶
               </button>
             </div>
           </Screen>
 
           {/* right: speed gauge and throttle */}
-          <Screen label="Speed" className="hidden shrink-0 sm:block">
+          {pilot && <Screen label="Speed" className="hidden shrink-0 sm:block">
             <Gauge v={hud.speed} />
-          </Screen>
-          <Screen label="Throttle" className={`shrink-0 ${glow("throttle")}`}>
+          </Screen>}
+          {pilot && <Screen label="Throttle" className={`shrink-0 ${glow("throttle")}`}>
             <div className="flex items-center gap-2">
               <input
                 type="range"
@@ -1053,7 +1147,7 @@ function Cockpit({
                 <span className="text-center font-mono text-[10px] text-[#f4f1e6] tabular-nums">{Math.round(hud.throttle * 100)}%</span>
               </div>
             </div>
-          </Screen>
+          </Screen>}
         </div>
       </div>
 

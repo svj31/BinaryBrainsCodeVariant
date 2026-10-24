@@ -170,7 +170,15 @@ export function GardenApp() {
                   <EmptyState query={query} onClear={() => (setQuery(""), setFilter("all"))} />
                 ) : view === "garden" ? (
                   <div className="relative h-[520px] overflow-hidden rounded-2xl border border-[#1d2f3a] bg-[#060d14] sm:h-[clamp(540px,calc(100svh-120px),740px)]">
-                    <SpaceGarden stones={stones} selectedId={selectedId} onSelect={select} className="h-full w-full" />
+                    <SpaceGarden stones={stones} selectedId={selectedId} onSelect={setSelectedId} className="h-full w-full" />
+                  {selected && (
+                    <button
+                      onClick={() => setSheetOpen(true)}
+                      className="absolute top-14 right-3 z-30 rounded-lg border border-white/15 bg-[#f2b34a] px-3 py-1.5 text-xs font-semibold text-[#1e2721] shadow-lg lg:hidden"
+                    >
+                      Details: {selected.project.name}
+                    </button>
+                  )}
                   </div>
                 ) : view === "plots" ? (
                   <PlotsView items={items} selectedId={selectedId} onSelect={select} />
