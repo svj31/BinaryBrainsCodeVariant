@@ -13,6 +13,9 @@ import { GraveLoader } from "@/components/ui/GraveLoader";
 import { LedgerView, PlotsView, TimelineView } from "./Views";
 import { QuickPanel } from "./QuickPanel";
 import { useRitual } from "@/components/magic/Ritual";
+import { ViewSpell } from "@/components/magic/ViewSpell";
+import { ActionZone, DragCard, ZoneIcon, useDnd } from "@/components/canvas/dnd";
+import { Headstone } from "@/components/ui/Headstone";
 import { VIEWS, ViewSwitcher, type ViewId } from "./ViewSwitcher";
 
 const GardenScene = dynamic(() => import("@/components/three/GardenScene"), {
@@ -35,9 +38,18 @@ export function GardenApp() {
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [spell, setSpell] = useState<{ key: number; to: string } | null>(null);
   const all = useAssessed();
   const hydrated = useGraveyard((s) => s.hydrated);
   const resetDemo = useGraveyard((s) => s.resetDemo);
+  const update = useGraveyard((s) => s.update);
+  const remove = useGraveyard((s) => s.remove);
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const items = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -59,11 +71,14 @@ export function GardenApp() {
 
   const changeView = useCallback(
     (v: ViewId) => {
+      if (v === view) return;
+      setSpell({ key: Date.now(), to: VIEWS.find((x) => x.id === v)!.label });
+      setTimeout(() => setSpell(null), 1400);
       setView(v);
       router.replace(`/garden?view=${v}`, { scroll: false });
       track("view_change", { view: v });
     },
-    [router],
+    [router, view],
   );
 
   const select = useCallback((id: string) => {
@@ -135,7 +150,9 @@ export function GardenApp() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div id="garden-view" role="tabpanel" aria-label={`${view} view`} className="min-w-0">
+        <div id="garden-view" role="tabpanel" data-spell={spell ? "on" : undefined} aria-label={`${view} view`} className="min-w-0">
+          <div className="relative">
+          <ViewSpell spell={spell} />
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={view}
@@ -145,14 +162,7 @@ export function GardenApp() {
               exit={{ opacity: 0, scale: 0.97, filter: "blur(6px)", transition: { duration: 0.22 } }}
               transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
             >
-              <motion.span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 z-20 w-32 -skew-x-12"
-                style={{ background: "linear-gradient(90deg, transparent, rgba(242,179,74,0.35), transparent)" }}
-                initial={{ left: "-20%" }}
-                animate={{ left: "120%" }}
-                transition={{ duration: 0.9, ease: "easeInOut" }}
-              />
+
               {items.length === 0 ? (
                 <EmptyState query={query} onClear={() => (setQuery(""), setFilter("all"))} />
               ) : view === "garden" ? (
@@ -171,7 +181,61 @@ export function GardenApp() {
               )}
             </motion.div>
           </AnimatePresence>
+          </div>
         </div>
+
+        {selected && (
+          <section aria-label="Action dock" className="lg:order-first lg:col-span-2">
+            <div className="grid items-stretch gap-2 rounded-xl border border-line bg-paper-2/70 p-3 sm:grid-cols-[1.2fr_1fr_1fr_1fr]">
+              <DragCard data={{ kind: "project", id: selected.project.id, label: selected.project.name }} hint="Drag into Open, Nudge or Compost">
+                <div className="flex h-full items-center gap-3 rounded-lg border border-line bg-card px-3 py-2">
+                  <Headstone score={selected.a.score} sprout={selected.a.score >= 55} className="h-10 w-8 shrink-0" />
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold">{selected.project.name}</span>
+                    <span className="text-xs text-ink-3">drag this card, or any plot card</span>
+                  </span>
+                </div>
+              </DragCard>
+              <ActionZone id="dock-open" label="Open verdict" accepts={["project"]} icon={ZoneIcon.open} compact onDrop={(c) => router.push(`/garden/${c.id}`)} />
+              <ActionZone
+                id="dock-nudge"
+                label="Nudge in 2 weeks"
+                accepts={["project"]}
+                icon={ZoneIcon.bell}
+                tone="var(--dawn)"
+                compact
+                onDrop={(c) => {
+                  const d = new Date();
+                  d.setDate(d.getDate() + 14);
+                  update(c.id, { remindOn: d.toISOString().slice(0, 10) });
+                  useDnd.getState().say(`Nudge set for ${c.label}.`);
+                  setToast(`${c.label}: nudge set for 2 weeks from today`);
+                }}
+              />
+              <ActionZone
+                id="dock-compost"
+                label="Compost"
+                accepts={["project"]}
+                icon={ZoneIcon.compost}
+                tone="var(--clay)"
+                compact
+                onDrop={(c) => {
+                  if (confirm(`Remove ${c.label} from your garden?`)) {
+                    remove(c.id);
+                    setToast(`${c.label} was composted`);
+                  }
+                }}
+              />
+            </div>
+            <AnimatePresence>
+              {toast && (
+                <motion.p role="status" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-2 text-sm font-medium text-moss">
+                  {toast}
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </section>
+        )}
 
         <aside className="hidden lg:block" aria-label="Selected project">
           <div className="sticky top-24">
@@ -184,14 +248,22 @@ export function GardenApp() {
         <p>
           {hydrated ? "Sample projects are loaded so you can explore. Your own burials are saved in this browser." : "Loading your garden."}
         </p>
-        <button
-          className="font-medium text-moss hover:underline"
-          onClick={() => {
-            if (confirm("Reset the garden to the sample projects? Projects you added will be removed.")) useRitual.getState().cast("reset", undefined, 1500).then(resetDemo);
-          }}
-        >
-          Reset to sample data
-        </button>
+        <div className="flex items-center gap-2">
+          <DragCard data={{ kind: "seeds", id: "seeds", label: "Sample seed packet" }} hint="Drag into Replant to reset to sample data">
+            <span className="block rounded-md border border-line bg-card px-3 py-1.5 text-sm font-medium">Sample seeds</span>
+          </DragCard>
+          <ActionZone
+            id="replant"
+            label="Replant"
+            accepts={["seeds"]}
+            compact
+            tone="var(--moss)"
+            className="!py-1.5"
+            onDrop={() => {
+              if (confirm("Reset the garden to the sample projects? Projects you added will be removed.")) useRitual.getState().cast("reset", undefined, 1500).then(resetDemo);
+            }}
+          />
+        </div>
       </div>
 
       {/* Mobile bottom sheet */}

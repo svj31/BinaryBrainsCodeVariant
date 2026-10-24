@@ -8,6 +8,7 @@ import { CAUSES, VERDICTS } from "@/lib/verdicts";
 import { ago, daysBetween, fmtMonth } from "@/lib/format";
 import { Headstone } from "@/components/ui/Headstone";
 import { StatusTag, VerdictBadge } from "@/components/ui/VerdictBadge";
+import { DragCard } from "@/components/canvas/dnd";
 
 interface ViewProps {
   items: Assessed[];
@@ -35,10 +36,10 @@ export function PlotsView({ items, selectedId, onSelect }: ViewProps) {
               transition={{ duration: 0.6, delay: Math.min(i * 0.05, 0.4), ease }}
               style={{ transformOrigin: "50% 100%" }}
             >
-              <motion.button
+              <DragCard data={{ kind: "project", id: p.id, label: p.name }} hint="Click to preview, or drag into the action dock" className="h-full">
+              <motion.div
                 onClick={() => onSelect(p.id)}
-                aria-pressed={selected}
-                whileHover={{ y: -6 }}
+                data-selected={selected || undefined}
                 whileTap={{ scale: 0.98 }}
                 className={`group flex h-full w-full flex-col overflow-hidden rounded-xl border bg-card text-left transition-shadow ${
                   selected ? "border-transparent shadow-[0_20px_50px_-24px_rgba(30,39,33,0.6)]" : "border-line hover:shadow-[0_20px_40px_-26px_rgba(30,39,33,0.5)]"
@@ -76,25 +77,51 @@ export function PlotsView({ items, selectedId, onSelect }: ViewProps) {
                   </div>
                   <p className="mt-1 line-clamp-2 text-sm text-ink-2">{p.pitch}</p>
                   <div className="mt-auto pt-4">
-                    <div className="flex h-8 items-end gap-1" aria-hidden="true">
-                      {a.factors.map((f, k) => (
-                        <motion.span
-                          key={f.key}
-                          className="flex-1 rounded-t-[2px]"
-                          style={{ background: f.value >= 0.6 ? "var(--moss)" : f.value >= 0.35 ? "var(--dawn)" : "var(--clay)" }}
-                          initial={{ height: 0 }}
-                          animate={{ height: `${Math.max(8, f.value * 100)}%` }}
-                          transition={{ duration: 0.6, delay: 0.3 + k * 0.05, ease }}
-                        />
-                      ))}
-                    </div>
+                    {(() => {
+                      const weak = [...a.factors].sort((x, y) => x.value - y.value)[0];
+                      return (
+                        <figure aria-label={`Six signals behind the score. Weakest: ${weak.label}`}>
+                          <figcaption className="mb-1.5 flex justify-between font-mono text-[10px] uppercase tracking-wider text-ink-3">
+                            <span>Six signals</span>
+                            <span>
+                              weak spot: <span className="text-clay">{weak.label.toLowerCase()}</span>
+                            </span>
+                          </figcaption>
+                          <div className="flex h-10 items-end gap-1.5">
+                            {a.factors.map((f, k) => (
+                              <span key={f.key} className="group/bar relative flex h-full flex-1 flex-col justify-end" title={`${f.label}: ${Math.round(f.value * 100)}/100`}>
+                                <span className="pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 font-mono text-[10px] text-ink opacity-0 transition-opacity group-hover/bar:opacity-100">
+                                  {Math.round(f.value * 100)}
+                                </span>
+                                <span className="absolute inset-x-0 bottom-0 h-full rounded-t-[2px] bg-stone-light/60" aria-hidden="true" />
+                                <motion.span
+                                  className="relative rounded-t-[2px]"
+                                  style={{ background: f.key === weak.key ? "var(--clay)" : f.value >= 0.6 ? "var(--moss)" : "var(--dawn)" }}
+                                  initial={{ height: 0 }}
+                                  animate={{ height: `${Math.max(6, f.value * 100)}%` }}
+                                  transition={{ duration: 0.6, delay: 0.3 + k * 0.05, ease }}
+                                />
+                              </span>
+                            ))}
+                          </div>
+                          <div className="mt-1 flex gap-1.5 font-mono text-[9px] uppercase text-ink-3" aria-hidden="true">
+                            {a.factors.map((f) => (
+                              <span key={f.key} className="flex-1 truncate text-center">
+                                {f.label.split(" ")[0].slice(0, 5)}
+                              </span>
+                            ))}
+                          </div>
+                        </figure>
+                      );
+                    })()}
                     <p className="mt-3 flex justify-between border-t border-line-2 pt-2.5 text-xs text-ink-3">
                       <span>Buried {ago(p.buriedOn)}</span>
                       <span>{CAUSES[p.causes[0]]?.label}</span>
                     </p>
                   </div>
                 </div>
-              </motion.button>
+              </motion.div>
+              </DragCard>
             </motion.li>
           );
         })}
