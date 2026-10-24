@@ -81,6 +81,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <i />
           </div>
         </div>
+        {/* Full opening once per visit; later loads get a quick fade. Any click or key skips it. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var b=document.getElementById('sw-boot');if(!b)return;var q=function(){b.classList.add('sw-boot-quick')};try{if(sessionStorage.getItem('sw-intro'))q();else sessionStorage.setItem('sw-intro','1')}catch(e){q()}['pointerdown','keydown'].forEach(function(t){addEventListener(t,q,{once:true})})})()`,
+          }}
+        />
         <MotionProvider>
           <Header />
           <main id="main">{children}</main>

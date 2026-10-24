@@ -13,7 +13,7 @@ export function BootDone() {
     // React owns this node, so hide it with CSS instead of removing it.
     const t = setTimeout(() => el.classList.add("sw-boot-done"), 450);
     // once the opening has played, take it out of rendering entirely so its layers cost nothing
-    const gone = setTimeout(() => (el.style.display = "none"), 5600);
+    const gone = setTimeout(() => (el.style.display = "none"), el.classList.contains("sw-boot-quick") ? 450 : 5600);
     return () => (clearTimeout(t), clearTimeout(gone));
   }, []);
   return null;

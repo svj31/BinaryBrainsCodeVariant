@@ -60,10 +60,10 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <CommandChip />
           <TourButton />
-          <span className="flex items-center gap-2" data-tour="prefs">
+          <span className="hidden items-center gap-2 sm:flex" data-tour="prefs">
             <SoundToggle />
             <ThemeSwitch />
           </span>
@@ -112,6 +112,13 @@ export function Header() {
                   </Link>
                 </li>
               ))}
+              <li className="flex items-center justify-between gap-3 border-t border-line-2 py-3 sm:hidden">
+                <span className="text-sm text-ink-2">Sound and theme</span>
+                <span className="flex items-center gap-2">
+                  <SoundToggle />
+                  <ThemeSwitch />
+                </span>
+              </li>
               <li className="pt-2">
                 <Link href="/bury" className="btn btn-primary w-full">
                   Bury a project

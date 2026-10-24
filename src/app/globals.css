@@ -629,3 +629,10 @@ main a[class*="rounded-lg"][class*="border"]:hover, main a[class*="rounded-xl"][
   animation: sw-twinkle-layer 3.2s ease-in-out infinite alternate;
 }
 @keyframes sw-twinkle-layer { from { opacity: 0.9; } to { opacity: 0.45; } }
+
+/* Quick boot: repeat visits and skipped intros fade straight to the page */
+#sw-boot.sw-boot-quick,
+#sw-boot.sw-boot-quick.sw-boot-done { animation: sw-boot-out 0.35s ease 0.05s forwards !important; pointer-events: none; }
+#sw-boot.sw-boot-quick * { animation-duration: 0.01ms !important; animation-delay: 0s !important; }
+/* the boot layer never affects page width, whatever its animated children do */
+#sw-boot { position: fixed; inset: 0; overflow: hidden; contain: strict; }
